@@ -140,15 +140,14 @@ def ygrid(y,
            dymin = 10,
            dymax = 20,
            area_type='center'):
-     '''
-     '''
-     
-    if len(y)==1:
+    '''
+    '''
+    if len(y) == 1:
         print('1D model')
         ygr = np.linspace(0,1,1) * dymin
     else:
         if dymin==dymax:
             ygr = np.arange(np.min(y),np.max(y),dxmax)
-        else:
-            if area_type == 'center':
-                
+    #else:
+    #    if area_type == 'center':
+    return ygr

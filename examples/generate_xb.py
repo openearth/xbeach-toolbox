@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d, Axes3D 
 from matplotlib import cm
 
-from xbeachtools import xgrid
+from scripts.xbeachtools import xgrid
 
 ## load data
 bathy = np.loadtxt('clean//bathy.dep')
