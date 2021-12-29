@@ -44,30 +44,58 @@ def dispersion(w, d, max_error=0.00001):
 
 
 def seaward_extend(x,y,z,slope=1/20,depth=-20):
+    '''
+    Compute the seaward extend of the bathymery based on an artificial  slope and required offshore depth
 
-    ## maximum bed level. 
+    Parameters
+    ----------
+    x : array
+        x coordinates of the grid.
+    y : array
+        y coordinates of the grid.
+    z : array
+        array with the bathymetry. positive upwards
+    slope : float, optional
+        artificial slope applied at the offshore to boundary. The default is 1/20.
+    depth : float, optional
+        Required offshore depth at the boundary. The default is -20.
+
+    Returns
+    -------
+    xgr : array
+        x grid.
+    ygr : array
+        y grid.
+    zgr : array
+        bathymetry.
+
+    '''
+    if len(z.shape)==1:
+        z = np.reshape(z,(1,len(z)))
+        x = np.reshape(x,(1,len(x)))
+        y = np.reshape(y,(1,len(y)))
+
+    ## maximum bed level at offshore boundary. 
     z0max = np.max(z[:,0])
     
-    ## dx
+    ## dx at offshore boundary. It assumes a constant dx at the boundary!
     dx_grid = x[0,1]-x[0,0]
     
     ## maximum distance
     distance    = (z0max - depth) * 1/slope
+    ## dummy array
     x_dummy     = np.arange(x[0,0]-distance,x[0,0],dx_grid)
     
     x_extend    = np.ones((x.shape[0], len(x_dummy) ))
     x_extend    = x_extend * x_dummy
     z_extend    = np.ones_like(x_extend)
-    
     y_extend    = np.ones_like(x_extend)
-        
-    z_extend = z_extend * depth
-    
+    z_extend    = z_extend * depth
     
     for ii, z0 in enumerate(z[:,0]):
         if z0 < depth:
             continue
-        
+        ## required dx and dz
         dz = z0 - depth
         dx = 1/slope * dz
         
@@ -80,8 +108,8 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
         
         N = len(znew)
         
-        z_extend[ii,-N:] = znew
-        y_extend[ii,:] = y[ii,0]
+        z_extend[ii,-N:]    = znew
+        y_extend[ii,:]      = y[ii,0]
     
     xgr = np.concatenate((x_extend,x),1)
     zgr = np.concatenate((z_extend,z),1)
@@ -89,14 +117,7 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
     
     return xgr, ygr, zgr
         
-        
-        
-    
-    
 
-  
-    
-    
 
 def xgrid(x,z,
           ppwl=20,
@@ -344,21 +365,45 @@ def ygrid(y,
            maxerror = 0.05,
            transition_distance = -0.1,
            area_size = 0.4):
-     '''
+    '''
+    
+
+    Parameters
+    ----------
+    y : TYPE
+        DESCRIPTION.
+    dymin : TYPE, optional
+        DESCRIPTION. The default is 5.
+    dymax : TYPE, optional
+        DESCRIPTION. The default is 20.
+    area_type : TYPE, optional
+        DESCRIPTION. The default is 'center'.
+    maxerror : TYPE, optional
+        DESCRIPTION. The default is 0.05.
+    transition_distance : TYPE, optional
+        DESCRIPTION. The default is -0.1.
+    area_size : TYPE, optional
+        DESCRIPTION. The default is 0.4.
+
+    Returns
+    -------
+    ygr : TYPE
+        DESCRIPTION.
+
+    '''
+
      
-     '''
-     
-     retry = False
-     if transition_distance < 0:
+    retry = False
+    if transition_distance < 0:
          transition_distance = np.abs(transition_distance)
          retry = True
          print('Enable optimization of transition distance')
      
      
-     if len(y)==1:
+    if len(y)==1:
          print('1D model')
          ygr = np.linspace(0,1,1) * dymin
-     else:
+    else:
          if dymin==dymax:
              ygr = np.arange(np.min(y),np.max(y)+dymax,dymax)
              print('Create equidistant alongshore grid')
@@ -398,13 +443,16 @@ def ygrid(y,
              tmp = np.concatenate((np.flip(np.arange( ygr[0] - dymax, np.min(y) - dymax, -1*dymax)), ygr ))
              ygr = np.concatenate((tmp, np.arange( ygr[-1] + dymax, np.max(y) + dymax, dymax) ))
             
-     return ygr
+    return ygr
                 
  
     
  
     
 class XBeachModelSetup():
+    '''
+    XBeach model setup class
+    ''' 
     
     
     def __init__(self,fname):
@@ -425,19 +473,16 @@ class XBeachModelSetup():
         else:
             self.wavemodel = input_par_dict['Wavemodel']
         
-        
-        
+
         ## load parameters and categories
         f           = open(os.path.join(os.path.dirname(__file__), 'par.json'),'r')
         par_dict    = json.loads(f.read())
-        
         
         self.input_par = {}
         ## loop over categories
         for par_category in par_dict:
             ## loop over input parameters 
             for input_par in input_par_dict:
-                
                 ## if input parameter is in category, add parameter
                 if input_par in par_dict[par_category]:
                     ## create category if not exist
@@ -448,10 +493,18 @@ class XBeachModelSetup():
         
     
     def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0, thetamin=-90, thetamax = 90, dtheta=10):
-        ## check dimensions
-        self.xgr = xgr
-        self.ygr = ygr
-        self.zgr = zgr
+        
+        ## 1D model
+        if ygr is None or ygr.shape[0]==1:
+            self.ygr = None
+            ## reduce size 
+            self.xgr = np.reshape(xgr,len(np.squeeze(xgr) ))
+            self.zgr = np.reshape(zgr,len(np.squeeze(zgr)))
+        ## 2D model
+        else:
+            self.ygr = ygr
+            self.xgr = xgr
+            self.zgr = zgr
         
         ##
         self.nx = xgr.shape[1]
@@ -475,8 +528,6 @@ class XBeachModelSetup():
         self.vardx  = 1
     
     def set_waves(self,wbctype, input_struct):
-        
-        
         self.wbctype = wbctype
         ##
         if wbctype=='jonstable':
@@ -489,7 +540,6 @@ class XBeachModelSetup():
         self.waves_boundary  = {}
         for item in required_par:
             assert item in input_struct, '{} missing'.format(item)
-        
             self.waves_boundary[item] =  input_struct[item]
             
 
@@ -497,7 +547,9 @@ class XBeachModelSetup():
     def set_tide(self):
         pass
         
-    
+    def load_model_setup(self,path):
+        ## todo
+        pass    
 
         
         
@@ -508,7 +560,8 @@ class XBeachModelSetup():
         
         
         
-        current_date = datetime.today().strftime('%Y-%m-%d %HH:%mm')
+        current_date    = datetime.today().strftime('%Y-%m-%d %HH:%mm')
+        user            =  os.path.basename(os.path.expanduser('~'))
         
         tabnumber = 20
         
@@ -544,6 +597,7 @@ class XBeachModelSetup():
             ## meta data
             f.write('%% XBeach model: {} \n'.format(self.fname))
             f.write('%% Params created on {} \n'.format(current_date))
+            f.write('%% Params created by {} \n'.format(user))
             f.write('\n')
 
             ## general
@@ -594,9 +648,7 @@ class XBeachModelSetup():
                     for item in dummy:
                         f.write('{}\n'.format(item))
                     f.write('\n')
-
-            
-            
+    
         ## write grid x
         with open(os.path.join(path,'x.grd'),'w') as f:
             for ii in range(self.ny):
@@ -616,13 +668,40 @@ class XBeachModelSetup():
                     f.write('{} '.format(self.zgr[ii,jj]))
                 f.write('\n')             
                 
+        ## write figures
+        if figure:
+            ## plot and write domain
+            self._plotdomain(path)
+            ## plot and write wave boundary
+            if self.wbctype=='jonstable' or self.wbctype=='jons':
+                self._plot_boundary(path)
 
-        ## write png
+    def _plot_boundary(self,save_path=None):
+        if self.wbctype=='jonstable':
+            plt.figure()
+            plt.subplot(3,1,1)
+            plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['Hm0'],'-o')
+            plt.ylabel('$H_{m0}$')
+            plt.subplot(3,1,2)
+            plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['Tp'],'-o')
+            plt.ylabel('$T_{p}$')
+            plt.subplot(3,1,3)
+            plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['mainang'],'-o')
+            plt.ylabel('$YD$')
+            plt.xlabel('Time')
+            if save_path!=None:
+                plt.savefig(os.path.join(save_path,'jonstable.png'))
+        elif self.wbctype=='jons':
+            print('wbctype=jons cannot be plotted')
+        else:
+            print('Not possible to plot wave boundary')
+            
+    def _plotdomain(self,save_path=None):
         plt.figure()
         if self.fast1D==True:
-            plt.plot(self.xgr,self,zgr)
+            plt.plot(self.xgr,self.zgr)
             plt.xlabel('x')
-            plt.tlabel('z')
+            plt.ylabel('z')
         else:
             plt.pcolor(self.xgr,self.ygr,self.zgr)
             plt.xlabel('x')
@@ -630,10 +709,5 @@ class XBeachModelSetup():
             plt.colorbar()
         plt.grid('on')
         plt.title(self.fname)
-        plt.savefig(os.path.join(path,'domain.png'))
-
-    def _plot_boundary(self):
-        pass
-
-    def _plotdomain(self):
-        pass
+        if save_path!=None:
+            plt.savefig(os.path.join(save_path,'domain.png'))
