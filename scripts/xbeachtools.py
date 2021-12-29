@@ -2,8 +2,9 @@ import numpy as np
 import os
 from datetime import datetime
 import json
+import matplotlib.pyplot as plt
 
-def dispersion(w,d,max_error=0.00001):
+def dispersion(w, d, max_error=0.00001):
     '''
     Computes the wave number given a radial frequeny and water depth
 
@@ -43,7 +44,7 @@ def dispersion(w,d,max_error=0.00001):
 
 
 def seaward_extend(x,y,z,slope=1/20,depth=-20):
-    
+
     ## maximum bed level. 
     z0max = np.max(z[:,0])
     
@@ -66,7 +67,6 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
     for ii, z0 in enumerate(z[:,0]):
         if z0 < depth:
             continue
-        
         
         dz = z0 - depth
         dx = 1/slope * dz
@@ -408,7 +408,9 @@ class XBeachModelSetup():
     
     
     def __init__(self,fname):
-        self.fname = fname
+        self.fname      = fname
+        self.wbctype    = None
+        self.wavemodel  = None
         
     def __repr__(self):
         return self.fname
@@ -416,20 +418,25 @@ class XBeachModelSetup():
     
     def set_params(self,input_par_dict):
         
-        if 'wavemodel' not in input_par_dict:
-            print('no wavemodel defined')
+        ## set wavemodel
+        if 'Wavemodel' not in input_par_dict:
+            print('no wavemodel defined. Set to Surfbeat')
+            self.wavemodel = 'surfbeat'
+        else:
+            self.wavemodel = input_par_dict['Wavemodel']
         
-        f   = open(os.path.join(os.path.dirname(__file__), 'par.json'),'r')
-        par_dict = json.loads(f.read())
         
         
-        ## {'grid: {'nx: 10}}
+        ## load parameters and categories
+        f           = open(os.path.join(os.path.dirname(__file__), 'par.json'),'r')
+        par_dict    = json.loads(f.read())
+        
+        
         self.input_par = {}
-        
-        ## loop over input parameters 
-        for input_par in input_par_dict:
-            ## loop over categories
-            for par_category in par_dict:
+        ## loop over categories
+        for par_category in par_dict:
+            ## loop over input parameters 
+            for input_par in input_par_dict:
                 
                 ## if input parameter is in category, add parameter
                 if input_par in par_dict[par_category]:
@@ -440,9 +447,11 @@ class XBeachModelSetup():
                     self.input_par[par_category][input_par] = input_par_dict[input_par]
         
     
-    def set_grid(self,xgr,ygr,zgr):
+    def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0, thetamin=-90, thetamax = 90, dtheta=10):
         ## check dimensions
-        
+        self.xgr = xgr
+        self.ygr = ygr
+        self.zgr = zgr
         
         ##
         self.nx = xgr.shape[1]
@@ -456,11 +465,34 @@ class XBeachModelSetup():
         else:
             self.fast1D = False 
         ##
-        self.posdwn = -1
-        self.vardx = 0
+        self.posdwn = posdwn
+        self.xori   = xori
+        self.yori   = yori
+        self.yori   = yori
+        self.thetamin   = thetamin
+        self.thetamax   = thetamax
+        self.dtheta     = dtheta
+        self.vardx  = 1
     
-    def set_waves(self):
-        pass
+    def set_waves(self,wbctype, input_struct):
+        
+        
+        self.wbctype = wbctype
+        ##
+        if wbctype=='jonstable':
+            required_par = ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc']
+        elif wbctype=='jons':
+            required_par = ['Hm0','Tp','mainang','gammajsp','s','fnyq']
+        else:
+            assert False, 'Wrong wbctype'
+        
+        self.waves_boundary  = {}
+        for item in required_par:
+            assert item in input_struct, '{} missing'.format(item)
+        
+            self.waves_boundary[item] =  input_struct[item]
+            
+
         
     def set_tide(self):
         pass
@@ -469,12 +501,44 @@ class XBeachModelSetup():
 
         
         
-    def write_model(self, path):
+    def write_model(self, path, figure=True):
         path_params = os.path.join(path,'params.txt')
         
         assert os.path.exists(path), '{} does not exist'.format(path)
         
-        current_date = datetime.today().strftime('%Y-%m-%d')
+        
+        
+        current_date = datetime.today().strftime('%Y-%m-%d %HH:%mm')
+        
+        tabnumber = 20
+        
+        
+        ## waves boundary
+        if self.wbctype=='jons':
+            if 'Wave boundary condition parameters' in self.input_par:
+                self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonswap.txt'
+            else:
+               self.input_par['Wave boundary condition parameters'] = {}
+               self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonswap.txt'
+            required_par = ['Hm0','Tp','mainang','gammajsp','s','fnyq']
+            with open(os.path.join(path,'jonswap.txt'),'w') as f:
+                for par in required_par:
+                    f.write('{}\t= {}\n'.format(par,self.waves_boundary[par]).expandtabs(tabnumber))
+                
+        elif self.wbctype=='jonstable':
+            if 'Wave boundary condition parameters' in self.input_par:
+                self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonstable.txt'
+            else:
+               self.input_par['Wave boundary condition parameters'] = {}
+               self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonstable.txt'                
+            required_par = ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc']
+            with open(os.path.join(path,'jonstable.txt'),'w') as f:
+                for ii in range(len(self.waves_boundary['Hm0'])):
+                    for par in required_par:
+                        f.write('{} '.format(self.waves_boundary[par][ii]))
+                    f.write('\n')
+        
+        
         ## create params
         with open(path_params,'w') as f:
             ## meta data
@@ -482,28 +546,91 @@ class XBeachModelSetup():
             f.write('%% Params created on {} \n'.format(current_date))
             f.write('\n')
 
-            ## grid
+            ## general
             f.write('%% General \n')
+            f.write('\n')
+            if self.wavemodel!=None:
+                f.write('wavemodel\t= {}\n'.format(self.wavemodel).expandtabs(tabnumber))
+            if self.wbctype!=None:
+                f.write('wbctype\t= {}\n'.format(self.wbctype).expandtabs(tabnumber))
             f.write('\n')
             
             ## grid
             f.write('%% Grid \n')
             f.write('\n')
-            f.write('nx \t = {}\n'.format(self.nx))
-            f.write('ny \t = {}\n'.format(self.ny))
+            f.write('vardx\t= {}\n'.format(self.vardx).expandtabs(tabnumber))
+            f.write('nx\t= {}\n'.format(self.nx).expandtabs(tabnumber))
+            f.write('ny\t= {}\n'.format(self.ny).expandtabs(tabnumber))
+            f.write('xori\t= {}\n'.format(self.xori).expandtabs(tabnumber))
+            f.write('yori\t= {}\n'.format(self.yori).expandtabs(tabnumber))     
+            f.write('xfile\t= x.grd\n'.expandtabs(tabnumber))
+            f.write('yfile\t= y.grd\n'.expandtabs(tabnumber))
+            f.write('depfile\t= bed.dep\n'.expandtabs(tabnumber))
+            f.write('thetamin\t= {}\n'.format(self.thetamin).expandtabs(tabnumber))
+            f.write('thetamax\t= {}\n'.format(self.thetamax).expandtabs(tabnumber))
+            f.write('dtheta\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
+            f.write('\n')
             
-            f.write('ny \t = {}\n'.format(self.ny))
-            
-            
+            ## 
             for par_category in self.input_par:
+                ## skip category starting with _
+                if par_category[0]=='_':
+                    continue
+                
                 ## write meta
                 f.write('%% {} \n'.format(par_category))
                 f.write('\n')
                 for par in self.input_par[par_category]:
-                    f.write('{} \t = {}\n'.format(par,self.input_par[par_category][par]))
-            
+                    f.write('{}\t= {}\n'.format(par,self.input_par[par_category][par]).expandtabs(tabnumber))
+                f.write('\n')
+            ## 
+            if '_Output' in self.input_par:
+                f.write('%% Output variables \n')
+                f.write('\n')
+                for par in self.input_par['_Output']:
+                    dummy = self.input_par['_Output'][par]
+                    f.write('{}\t= {}\n'.format(par,len(dummy)).expandtabs(tabnumber))
+                    assert type(dummy)==list, 'expected a list for {}'.format(par)
+                    for item in dummy:
+                        f.write('{}\n'.format(item))
+                    f.write('\n')
 
-        pass
+            
+            
+        ## write grid x
+        with open(os.path.join(path,'x.grd'),'w') as f:
+            for ii in range(self.ny):
+                for jj in range(self.nx):
+                    f.write('{} '.format(self.xgr[ii,jj]))
+                f.write('\n')
+        ## write grid x
+        with open(os.path.join(path,'y.grd'),'w') as f:
+            for ii in range(self.ny):
+                for jj in range(self.nx):
+                    f.write('{} '.format(self.ygr[ii,jj]))
+                f.write('\n')                    
+       ## write dep
+        with open(os.path.join(path,'bed.dep'),'w') as f:
+            for ii in range(self.ny):
+                for jj in range(self.nx):
+                    f.write('{} '.format(self.zgr[ii,jj]))
+                f.write('\n')             
+                
+
+        ## write png
+        plt.figure()
+        if self.fast1D==True:
+            plt.plot(self.xgr,self,zgr)
+            plt.xlabel('x')
+            plt.tlabel('z')
+        else:
+            plt.pcolor(self.xgr,self.ygr,self.zgr)
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.colorbar()
+        plt.grid('on')
+        plt.title(self.fname)
+        plt.savefig(os.path.join(path,'domain.png'))
 
     def _plot_boundary(self):
         pass

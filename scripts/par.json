@@ -1,3 +1,13 @@
-{"general":["wavemodel"],
-"Initial conditions":["zs0"],
-"Physical constants":["befriccoef"]}
+{"Physical processes":["wavemodel","sedtrans","morphology","vegetation","ships","wind","viscosity","swrunup","swave","snells","single_dir","setbathy","gwflow","avalanching"],
+"Initial conditions":["zs0","zsinitfile","hotstartflow"],
+"Physical constants":["befriccoef"],
+"Model time":["tstop","CFL"],
+"Flow boundary condition parameters":["front","back","left","right"],
+"Tide boundary conditions":["zs0file","tideloc"],
+"Wave boundary condition parameters":["Hrms","Tlong","Trep","dir0","m","taper"],
+"Wave-spectrum boundary condition parameters":["rt","Tm01switch","correctHm0","dtbc","dthetaS_XB","fcutoff","nonhspectrum","nspectrumloc","nspr","random","sprdthr","trepfac"],
+"Morphology parameters":["morfac","morstart"],
+"Sediment input":["por","ws","rhos","ngd","wetslp","dryslp"],
+"Avalanching":["wetslp","dryslp"],
+"Output":["outputformat","tintg","tintm","tstart","tintp","tintc","nrugdepth","outputprecision","timings"],
+"_Output": ["nglobalvar","nmeanvar","npointvar","npoints"]}
