@@ -4,43 +4,179 @@ from datetime import datetime
 import json
 import matplotlib.pyplot as plt
 
-def dispersion(w, d, max_error=0.00001):
+from wave_functions import *
+
+
+def xb_run_win(xb, path_exe):
+    
+    if isinstance(xb,list):
+        if isinstance(xb[0],XBeachModelSetup):
+            path_sims = []
+            for item in xb:
+                path_sims.append(item.model_path)
+        elif isinstance(xb[0],str):
+            path_sims = xb
+        else:
+            print('Unvalid path')
+    elif isinstance(xb,XBeachModelSetup):
+        path_sims = xb.model_path
+    
+    
+
+def _celerity_ratio_equals_09(Tp,d_start):
     '''
-    Computes the wave number given a radial frequeny and water depth
+    function to find water depth for which the n ration equal 0.9
 
     Parameters
     ----------
-    w : float
-        Radial frequency.
-    d : float
-        water depth.
-    max_error : float, optional
-        maximum error. The default is 0.00001.
+    Tp : float
+        peak period.
+    d_start : float
+        Water depth.
 
     Returns
     -------
-    k : float
-        wave number.
+    d : float
+        depth.
 
     '''
-    g   = 9.81
-    ## initial guess
-    k1  = 1000
-    ## iterate untill convergence
-    for i in range(100000):
-        ## update k
-        k       = k1
-        ## next iteration
-        k1      = w**2.0/g/np.tanh(k * d)
-        ## compute error
-        error   = abs(k1-k)
-        if error < max_error:
-            break   
-    ## no convergence
-    if i==99999:
-        print ('Warning: no convergence')
-    return k 
+    d_dummy     = d_start
+    count2      = 1
+    n           = 1
+    while n>0.9:
+        cg, n       = wavecelerity(Tp, d_dummy)
+        d_dummy     = d_dummy + 0.05;
+        count2      = count2+1;
+        if count2>500:
+            print('No n value found!')
+            break 
+    d = d_dummy
+    return d
 
+def offshore_depth(Hm0, Tp, depth_offshore_profile, depth_boundary_conditions):
+    '''
+    
+    compute required ofsshore water depth to correctly force the waves
+    Parameters
+    ----------
+    Hm0 : float
+        Wave height.
+    Tp : float
+        Peak period.
+    depth_offshore_profile : float
+        Offshore depth of the profile.
+    depth_boundary_conditions : float
+        Depth of the boundary conditions.
+
+    Returns
+    -------
+    d_start : float
+        Required offshore water depth.
+    slope : float
+        Artificial slope.
+    Hm0_shoal : float
+        Wave height at the boundary.
+
+    '''
+    cg_bc, dummy            = wavecelerity(Tp, depth_boundary_conditions)
+    cg_profile, n_profile   = wavecelerity(Tp, depth_offshore_profile)
+    
+    Hm0_shoal           = Hm0 * np.sqrt(cg_bc/cg_profile)
+    
+    if Hm0_shoal/depth_offshore_profile < 0.3 and n_profile<0.9:
+        slope   = None
+        d_start = depth_offshore_profile
+        print('No extension required')
+        print('Hm0,shoal = {}'.format(Hm0_shoal))
+        print('d start = {}'.format(depth_offshore_profile))
+        print('Hm0,shoal/d = {}'.format(Hm0_shoal/depth_offshore_profile))
+        print('n = {}'.format(n_profile))
+    else:
+        ## compute d_start en Hm0,shoal iterative
+        d_start             = depth_offshore_profile
+        d_start_previous    = 2 * depth_offshore_profile
+        count               = 1
+        d_n                 = _celerity_ratio_equals_09(Tp,d_start)
+        while np.abs(d_start-d_start_previous)>0.05:
+            ## update depth
+            d_start_previous = d_start
+            ## compute required depth
+            d_start         = np.max([3.33333*Hm0_shoal, d_n])
+            ## compute hm0 shoal
+            cg, n_startdepth        = wavecelerity(Tp, d_start)
+            Hm0_shoal               = Hm0 * np.sqrt(cg_bc/cg)
+            ## update count
+            count =+ 1
+            if count>50:
+                print('no convergence')
+                break
+        if Hm0_shoal/depth_offshore_profile>0.3 and n_profile>0.9:
+            slope = 0.02
+            print('Artificial slope of 1:50')
+        else:
+            slope = 0.1
+            print('Artificial slope of 1:10')
+
+        print('Hm0,shoal = {}'.format(Hm0_shoal))
+        print('d start = {}'.format(d_start))
+        print('Hm0,shoal/d profile = {}'.format(Hm0_shoal/depth_offshore_profile))
+        print('Hm0,shoal/d slope = {}'.format(Hm0_shoal/d_start))
+        print('n profile = {}'.format(n_profile))
+        print('n slope = {}'.format(n_startdepth))
+    return d_start, slope, Hm0_shoal
+
+
+
+
+
+
+def lateral_extend(x,y,z,n=5):
+    '''
+    
+
+    Parameters
+    ----------
+    x : TYPE
+        DESCRIPTION.
+    y : TYPE
+        DESCRIPTION.
+    z : TYPE
+        DESCRIPTION.
+    n : TYPE, optional
+        DESCRIPTION. The default is 5.
+
+    Returns
+    -------
+    xnew : TYPE
+        DESCRIPTION.
+    ynew : TYPE
+        DESCRIPTION.
+    znew : TYPE
+        DESCRIPTION.
+
+    '''
+    dy1 = y[1,0]-y[0,0]
+    dy2 = y[-1,0]-y[-2,0]
+    
+    xnew = np.zeros((x.shape[0]+n*2, x.shape[1]))
+    ynew = np.zeros((y.shape[0]+n*2, y.shape[1]))
+    znew = np.zeros((z.shape[0]+n*2, z.shape[1]))
+    
+    xnew[n:-n] = x
+    ynew[n:-n] = y
+    znew[n:-n] = z
+    
+    for i in range(n):
+        ## update x
+        xnew[i,:]   = x[0,:]
+        xnew[-(i+1),:]  = x[-1,:]
+        ## update z
+        znew[i,:]   = z[0,:]
+        znew[-(i+1),:]  = z[-1,:]       
+        ## update y
+        ynew[i,:]   = y[0,:]-dy1*n+dy1*i
+        ynew[-(i+1),:]  = y[-1,:]+dy2*n-dy2*i
+    return xnew, ynew, znew
 
 
 def seaward_extend(x,y,z,slope=1/20,depth=-20):
@@ -211,7 +347,7 @@ def xgrid(x,z,
             Lwave   = 4 * Lshort
         else:
             Lwave = 0
-            
+        
             ## MATLAB
             #k       = dispersion(2*np.pi/Tm,h[0])
             #Lshort  = 2*np.pi/k
@@ -464,8 +600,11 @@ class XBeachModelSetup():
     
     def __init__(self,fname):
         self.fname      = fname
+        ## by default set wbctype and wavemodel to None
         self.wbctype    = None
         self.wavemodel  = None
+        
+        self.model_path = None
         
     def __repr__(self):
         return self.fname
@@ -473,9 +612,9 @@ class XBeachModelSetup():
     
     def set_params(self,input_par_dict):
         
-        ## set wavemodel
+        ## set wavemodel. Default Surfbeat
         if 'Wavemodel' not in input_par_dict:
-            print('no wavemodel defined. Set to Surfbeat')
+            print('No wavemodel defined. Set to Surfbeat')
             self.wavemodel = 'surfbeat'
         else:
             self.wavemodel = input_par_dict['Wavemodel']
@@ -484,7 +623,7 @@ class XBeachModelSetup():
         ## load parameters and categories
         f           = open(os.path.join(os.path.dirname(__file__), 'par.json'),'r')
         par_dict    = json.loads(f.read())
-        
+        ## create input dict
         self.input_par = {}
         ## loop over categories
         for par_category in par_dict:
@@ -514,8 +653,8 @@ class XBeachModelSetup():
             self.zgr = zgr
         
         ##
-        self.nx = xgr.shape[1]-1
-        self.ny = xgr.shape[0]-1
+        self.nx = xgr.shape[1] - 1
+        self.ny = xgr.shape[0] - 1
         ##
         
         ## 1D
@@ -549,6 +688,8 @@ class XBeachModelSetup():
             assert item in input_struct, '{} missing'.format(item)
             self.waves_boundary[item] =  input_struct[item]
             
+    def set_vegetation(self):
+        pass
 
         
     def set_tide(self):
@@ -561,6 +702,7 @@ class XBeachModelSetup():
         
         
     def write_model(self, path, figure=True):
+        self.model_path = path
         path_params = os.path.join(path,'params.txt')
         
         assert os.path.exists(path), '{} does not exist'.format(path)
@@ -632,7 +774,7 @@ class XBeachModelSetup():
             f.write('dtheta\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
             f.write('\n')
             
-            ## 
+            ## write input vars
             for par_category in self.input_par:
                 ## skip category starting with _
                 if par_category[0]=='_':
@@ -644,7 +786,7 @@ class XBeachModelSetup():
                 for par in self.input_par[par_category]:
                     f.write('{}\t= {}\n'.format(par,self.input_par[par_category][par]).expandtabs(tabnumber))
                 f.write('\n')
-            ## 
+            ## write output variables
             if '_Output' in self.input_par:
                 f.write('%% Output variables \n')
                 f.write('\n')
@@ -662,8 +804,8 @@ class XBeachModelSetup():
                 for jj in range(self.nx+1):
                     f.write('{} '.format(self.xgr[ii,jj]))
                 f.write('\n')
-        if not self.fast1D==True:
-            ## write grid x
+        if not self.fast1D:
+            ## write grid y
             with open(os.path.join(path,'y.grd'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
@@ -695,7 +837,7 @@ class XBeachModelSetup():
             plt.ylabel('$T_{p}$')
             plt.subplot(3,1,3)
             plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['mainang'],'-o')
-            plt.ylabel('$YD$')
+            plt.ylabel('$D$')
             plt.xlabel('Time')
             if save_path!=None:
                 plt.savefig(os.path.join(save_path,'jonstable.png'))
@@ -707,7 +849,7 @@ class XBeachModelSetup():
     def _plotdomain(self,save_path=None):
         plt.figure()
         if self.fast1D==True:
-            plt.plot(self.xgr[0,:],self.zgr[0,:])
+            plt.plot(self.xgr,self.zgr)
             plt.xlabel('x')
             plt.ylabel('z')
         else:

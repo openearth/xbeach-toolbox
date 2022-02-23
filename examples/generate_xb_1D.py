@@ -10,7 +10,7 @@ import os
 ## import xbeach tools
 sys.path.append(os.path.abspath(os.path.join('..','scripts' )))
 
-from xbeachtools import xgrid, ygrid, seaward_extend, XBeachModelSetup
+from xbeachtools import xgrid, ygrid, seaward_extend, XBeachModelSetup, offshore_depth
 plt.style.use(os.path.join('..','scripts','xb.mplstyle'))
 ###############################################################################
 ###  load data                                                              ###
@@ -73,8 +73,9 @@ plt.title('xb bathy')
 ###  seaward extend                                                         ###
 ###############################################################################
 
+d_start, slope, Hm0_shoal = offshore_depth(Hm0=9, Tp=15, depth_offshore_profile=abs(bathy[0]), depth_boundary_conditions=20)
 
-xgr, ygr, zgr = seaward_extend(xgr,[0],zgr,slope=1/20,depth=-20)
+xgr, ygr, zgr = seaward_extend(xgr,[0],zgr,slope=slope,depth=d_start*-1)
 
 
 
