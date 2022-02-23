@@ -205,10 +205,17 @@ def xgrid(x,z,
         
         if h[-1]>eps:
             k       = dispersion(2*np.pi/Tm,h[-1])
+            ## MATLAB
+            # k       = dispersion(2*np.pi/Tm,h[0])
             Lshort  = 2*np.pi/k
             Lwave   = 4 * Lshort
         else:
             Lwave = 0
+            
+            ## MATLAB
+            #k       = dispersion(2*np.pi/Tm,h[0])
+            #Lshort  = 2*np.pi/k
+            #Lwave   = 4 * Lshort
         
         ##
         i   = 0
@@ -235,7 +242,7 @@ def xgrid(x,z,
             dx.append( np.maximum(depthfac*hgr[i], localmin) )
             
             if dxmax_cell > localmin:
-                dx[i] = np.minimum(dx[i], dxmax)
+                dx[i] = np.minimum(dx[i], dxmax_cell)
             else:
                 dx[i] = localmin
             
@@ -498,8 +505,8 @@ class XBeachModelSetup():
         if ygr is None or ygr.shape[0]==1:
             self.ygr = None
             ## reduce size 
-            self.xgr = np.reshape(xgr,len(np.squeeze(xgr) ))
-            self.zgr = np.reshape(zgr,len(np.squeeze(zgr)))
+            self.xgr = xgr #np.reshape(xgr,len(np.squeeze(xgr) ))
+            self.zgr = zgr #np.reshape(zgr,len(np.squeeze(zgr)))
         ## 2D model
         else:
             self.ygr = ygr
@@ -507,8 +514,8 @@ class XBeachModelSetup():
             self.zgr = zgr
         
         ##
-        self.nx = xgr.shape[1]
-        self.ny = xgr.shape[0]
+        self.nx = xgr.shape[1]-1
+        self.ny = xgr.shape[0]-1
         ##
         
         ## 1D
@@ -651,20 +658,21 @@ class XBeachModelSetup():
     
         ## write grid x
         with open(os.path.join(path,'x.grd'),'w') as f:
-            for ii in range(self.ny):
-                for jj in range(self.nx):
+            for ii in range(self.ny+1):
+                for jj in range(self.nx+1):
                     f.write('{} '.format(self.xgr[ii,jj]))
                 f.write('\n')
-        ## write grid x
-        with open(os.path.join(path,'y.grd'),'w') as f:
-            for ii in range(self.ny):
-                for jj in range(self.nx):
-                    f.write('{} '.format(self.ygr[ii,jj]))
-                f.write('\n')                    
+        if not self.fast1D==True:
+            ## write grid x
+            with open(os.path.join(path,'y.grd'),'w') as f:
+                for ii in range(self.ny+1):
+                    for jj in range(self.nx+1):
+                        f.write('{} '.format(self.ygr[ii,jj]))
+                    f.write('\n')                    
        ## write dep
         with open(os.path.join(path,'bed.dep'),'w') as f:
-            for ii in range(self.ny):
-                for jj in range(self.nx):
+            for ii in range(self.ny+1):
+                for jj in range(self.nx+1):
                     f.write('{} '.format(self.zgr[ii,jj]))
                 f.write('\n')             
                 
@@ -699,7 +707,7 @@ class XBeachModelSetup():
     def _plotdomain(self,save_path=None):
         plt.figure()
         if self.fast1D==True:
-            plt.plot(self.xgr,self.zgr)
+            plt.plot(self.xgr[0,:],self.zgr[0,:])
             plt.xlabel('x')
             plt.ylabel('z')
         else:
