@@ -151,3 +151,155 @@ def ygrid(y,
     #else:
     #    if area_type == 'center':
     return ygr
+                
+def rotate(x, y, theta):
+    '''
+    rotates the coordinates (x,y) through an angle theta
+    if x,y are matrices, these are first flattened.
+    output: rotated arrays x,y
+
+    author: Marlies van der Lugt
+    revision: v0
+
+    '''
+    rotMatrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+    coords = np.vstack((x.flatten(), y.flatten()))
+    return rotMatrix @ coords
+
+
+def rotate_grid(xgr, ygr, theta):
+    '''
+    rotate_grid(xgr,ygr,theta)
+    rotates a grid xgr,ygr over the angle theta (in radians)
+
+    author: Marlies van der Lugt
+    revision: v0
+    '''
+    ny, nx = xgr.shape
+    coords = np.vstack((xgr.reshape(-1), ygr.reshape(-1)))
+    rotMatrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+    uv, vd = rotMatrix @ coords
+    uv = uv.reshape([ny, nx])
+    vd = vd.reshape([ny, nx])
+    return uv, vd
+    
+def grid_world2local(xgr, ygr):
+    '''
+    identifies the rotation angle of the x-axis of a 2D XBeach grid and returns grid in local coordinates
+    (i.e. x only cross shore, y only alongshore)
+
+    output: rotated grid x,y and grid angle alpha
+
+    author: Marlies van der Lugt
+    revision: v0
+
+    '''
+    
+    #rotation of the grid
+    alpha = np.arctan2(ygr[0,-1]-ygr[0,0],xgr[0,-1]-xgr[0,0])
+    
+    #the origin of the grid
+    x0 = xgr[0,0]
+    y0 = ygr[0,0]
+    
+    #to local coordinates
+    xl,yl = rotate_grid(xgr-x0,ygr-y0,alpha) 
+    
+    return xl, yl, alpha
+    
+    
+
+def samples_to_local_grid(xs,ys,x0,y0,theta):
+    '''
+    # rephrase samples in local grid coordinates for simple interpolation and modification
+    Input variables
+    :param xs: x-world coordinates of samples
+    :param ys: y-world coordinates of samples
+    :param x0: x-origin of grid in world coordinates
+    :param y0: y-origin of grid in world coordinates
+    :param theta: angle of x-dir (nautical
+    :return:
+    xl: x-coordinates of samples in local coordinates
+    yl: y-coordintes of samples in local coordinates
+
+    author: Marlies van der Lugt
+    revision: v0
+    '''
+
+    xs2 = xs-x0
+    ys2 = ys-y0
+    return rotate(xs2,ys2,-theta)
+
+
+def in_polygon(x,y,poli):
+    '''
+    checks whether the coordinate (x,y) or list of coordinates (xi,yi) fall 
+    within the polygon poli.
+    
+    Parameters
+    ----------
+    x : numpy array, either 1D or 2D
+        x coordinates.
+    y : numpy array, either 1D or 2D
+        y coordintes.
+    poli : shapely Polygon geometry
+        polygon to test.
+
+    Returns
+    -------
+    ip : numpy array, either 1D or 2D
+        mask being 1 if in polyon, 0 outside polygon.
+
+    Author: Marlies van der Lugt
+    Revision 0 
+    '''
+    ny,nx = x.shape
+    p = [Point(ix,iy) for ix,iy in zip(x.flatten(),y.flatten())]
+    # pdb.set_trace()
+    ip = np.array([poli.contains(p[i]) for i in range(len(p))]).reshape(ny,nx)
+    return ip 
+    
+def grid_refine_grid(xgr,ygr,xfactor = 2, yfactor = 1):
+    '''
+    grid_refine_grid(xgr,ygr,zgr,xfactor = 2, yfactor = 1, ne_layer=None)
+    refines the grid with the factor xfactor in xdirection and yfactor in y direction
+    works only on rectilinear grids
+    returns refined grid where the grid has kept its coordinates
+    
+    Author: Marlies van der Lugt
+    Revision 0 
+    '''    
+    #rotation of the grid
+    alpha = np.arctan2(ygr[0,-1]-ygr[0,0],xgr[0,-1]-xgr[0,0])
+    
+    #the origin of the grid
+    x0 = xgr[0,0]
+    y0 = ygr[0,0]
+    
+    #to local coordinates
+    xl,yl = rotate_grid(xgr-x0,ygr-y0,alpha) 
+
+    #refine the xgrid with the factor
+    xx = xl[0,:]    
+    dx = np.diff(xx)
+ 
+    xr = (xx[:-1,None] + np.linspace(0,dx,xfactor,endpoint=False).T).ravel() # xx is input array
+    xr = np.append(xr,xx[-1])
+    
+    #refine the ygrid with the factor    
+    yy = yl[:,0]
+    dy = np.diff(yy)
+    yr = (yy[:-1,None] + np.linspace(0,dy,yfactor,endpoint=False).T).ravel() # yy is input array
+    yr = np.append(yr,yy[-1])
+    
+    xr,yr = np.meshgrid(xr,yr)
+    
+    #back to world coordinates
+    xnew,ynew = rotate_grid(xr,yr,-alpha)
+    
+    #add origin again
+    xgr2 = xnew + x0
+    ygr2 = ynew + y0
+    
+    return xgr2, ygr2 
+
