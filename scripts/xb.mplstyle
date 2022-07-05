@@ -1,0 +1,39 @@
+#Style sheet
+
+figure.figsize   : 6.0, 6.0
+figure.dpi       : 80
+savefig.dpi      : 100
+figure.subplot.hspace  : 0.3 
+figure.subplot.wspace  : 0.1 
+
+font.family : serif
+mathtext.fontset: cm
+mathtext.rm : serif
+image.cmap   : jet
+
+axes.titlesize : 24
+axes.labelsize : 20
+axes.grid        : True
+axes.prop_cycle    : cycler('color',['3182bd','c6dbef','dadaeb','756bb1'])
+axes.formatter.limits : -4, 2
+
+lines.linewidth : 3
+lines.markersize : 10
+xtick.labelsize : 16
+ytick.labelsize : 16
+
+grid.color       :   k       # grid color
+grid.linestyle   :   :       # dotted
+grid.linewidth   :   0.5     # in points
+
+
+legend.fancybox      : True
+legend.loc           : upper right
+legend.numpoints     : 2      
+legend.fontsize      : Large
+legend.framealpha    : 0.8    
+legend.scatterpoints : 3 # number of scatter points
+legend.edgecolor     : inherit   
+legend.shadow        : True
+
+
