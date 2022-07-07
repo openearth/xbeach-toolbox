@@ -5,6 +5,7 @@ r03 = XBeachModelAnalysis('r03', r'c:\Users\marliesvanderl\phd\modeling\rvw_phzd
 # load the xbeach model set-up
 r03.load_model_setup()
 
+
 # get an idea of the grid shape
 r03.read_modeloutput('H')
 ny, nx = r03.var['globalx'].shape
