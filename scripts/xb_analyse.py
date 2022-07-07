@@ -2,6 +2,9 @@ import numpy as np
 import os
 import netCDF4 as nc
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.colors as colors
+
 
 class XBeachModelAnalysis():
     '''
@@ -18,12 +21,28 @@ class XBeachModelAnalysis():
         self.tide = {}
         self.var = {}
         self.save_fig = False
+        self.plot_localcoords = False
+        self.plot_km_coords = False
+        self.AOI = []
 
     def __repr__(self):
         return self.fname
 
-    def save_fig(self,yesno):
+    def set_save_fig(self, yesno):
+        assert type(yesno) is bool, 'input type must be bool'
         self.save_fig = yesno
+
+    def set_plot_localcoords(self, yesno):
+        assert type(yesno) is bool, 'input type must be bool'
+        self.plot_localcoords = yesno
+
+    def set_plot_km_coords(self, yesno):
+        assert type(yesno) is bool, 'input type must be bool'
+        self.plot_km_coords = yesno
+
+    def set_aoi(self, AOI):
+        self.var = {}  # drop variables from memory because they need to be reloaded with appropriate AOI
+        self.AOI = AOI
 
     def get_params(self):
         '''
@@ -59,13 +78,12 @@ class XBeachModelAnalysis():
 
         # point variables
         ixlist = [i for i, var in enumerate(dat) if 'npointvar' in var]
-        if len(ixlist)>0:
+        if len(ixlist) > 0:
             i0 = ixlist[0]
             params['pointvar'] = dat[i0+1:i0+int(params['npointvar']+1)]
         else:
             params['npointvar'] = 0
             params['pointvar'] = []
-
 
         # output points
         if params['npointvar'] > 0:
@@ -74,16 +92,16 @@ class XBeachModelAnalysis():
             x = [float(t[0]) for t in points]
             y = [float(t[1]) for t in points]
             name = [t[2].strip() for t in points]
-            params['points'] = dict(zip(name,zip(x,y)))
+            params['points'] = dict(zip(name, zip(x, y)))
         else:
             params['points'] = {}
 
         self.params = params
 
     def get_grid(self):
-        ## only works currently for xbeach type grids (xfile, yfile)
+        # only works currently for xbeach type grids (xfile, yfile)
 
-        #read params.txt if this is not done yet
+        # read params.txt if this is not done yet
         if self.params is None:
             self.get_params()
 
@@ -95,10 +113,10 @@ class XBeachModelAnalysis():
         assert self.grd['z'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'z grid not of correct size'
         if 'posdwn' in self.params:
             if int(self.params['posdwn']) == 1:
-                self.grid['z'] = -1*self.grid['z']
+                self.grd['z'] = -1*self.grd['z']
 
-        #read optional files
-        if self.params['ny']>0:
+        # read optional files
+        if self.params['ny'] > 0:
             self.grd['y'] = np.loadtxt(os.path.join(self.model_path, self.params['yfile']))
             assert self.grd['y'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'y grid not of correct size'
 
@@ -111,18 +129,19 @@ class XBeachModelAnalysis():
         if self.params is None:
             self.get_params()
 
-            ## waves boundary
+            # waves boundary
             if self.params['wbctype'] == 'jonstable':
                 dat = np.loadtxt(os.path.join(self.model_path, self.params['bcfile']))
 
-                assert dat.shape[1] == 7, 'columns of jonstable should exactly be: Hm0, Tp, mainang, gammajsp, s, duration, dtbc'
+                assert dat.shape[1] == 7, \
+                    'columns of jonstable should exactly be: Hm0, Tp, mainang, gammajsp, s, duration, dtbc'
 
-                self.waves_boundary['Hm0'] = dat[:,0]
+                self.waves_boundary['Hm0'] = dat[:, 0]
                 self.waves_boundary['Tp'] = dat[:, 1]
                 self.waves_boundary['mainang'] = dat[:, 2]
                 self.waves_boundary['gammajsp'] = dat[:, 3]
                 self.waves_boundary['s'] = dat[:, 4]
-                self.waves_boundary['tíme'] = np.cumsum(dat[:,5])
+                self.waves_boundary['tíme'] = np.cumsum(dat[:, 5])
 
             elif self.params['wbctype'] == 'jons':
                 print('not yet written')
@@ -165,12 +184,28 @@ class XBeachModelAnalysis():
         ds = nc.Dataset(os.path.join(self.model_path, 'xboutput.nc'))
 
         self.var['globaltime'] = ds.variables['globaltime'][:]
-        if self.params['nmeanvar']>0:
+        if self.params['nmeanvar'] > 0:
             self.var['meantime'] = ds.variables['meantime'][:]
-        if self.params['npointvar']>0:
+        if self.params['npointvar'] > 0:
             self.var['pointtime'] = ds.variables['pointtime'][:]
-        self.var['x'] = ds.variables['globalx'][:]
-        self.var['y'] = ds.variables['globaly'][:]
+
+        x = ds.variables['globalx'][:]
+        y = ds.variables['globaly'][:]
+
+        if len(self.AOI) == 0:
+            # if no AOI is specified, wit gets set to the whole grid
+            ny, nx = x.shape
+            self.AOI = [0, ny, 0, nx]
+        else:
+            x = x[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+            y = y[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+
+        if self.plot_km_coords:
+            self.var['globalx'] = x/1e3
+            self.var['globaly'] = y/1e3
+        else:
+            self.var['globalx'] = x
+            self.var['globaly'] = y
 
         def path_distance(polx, poly):
             '''
@@ -192,13 +227,15 @@ class XBeachModelAnalysis():
 
             dr = np.sqrt(dx ** 2 + dy ** 2)
 
-            pathDistance = np.insert(np.cumsum(dr), 0, 0, axis=0)
+            pathdistance = np.insert(np.cumsum(dr), 0, 0, axis=0)
 
-            return pathDistance
+            return pathdistance
 
-        self.var['cross'] = path_distance(self.var['x'][0, :], self.var['y'][0, :])
-        self.var['along'] = path_distance(self.var['x'][:, 0], self.var['y'][:, 0])
+        self.var['cross'] = path_distance(x[0, :], y[0, :])
+        self.var['along'] = path_distance(x[:, 0], y[:, 0])
 
+        self.var['localy'], self.var['localx'] = np.meshgrid(self.var['cross'], self.var['along'])
+        self.var['localx'] = np.flipud(self.var['localx'])  # to plot
 
     def read_modeloutput(self, var):
         if var in self.var:
@@ -221,7 +258,15 @@ class XBeachModelAnalysis():
 
         ds = nc.Dataset(os.path.join(self.model_path, 'xboutput.nc'))
         print('loading variable {} from file'.format(var))
-        self.var[var] = ds.variables[var][:]
+        dat = ds.variables[var][:]
+        if len(dat.shape) == 2:
+            self.var[var] = dat[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+        elif len(dat.shape) == 3:
+            self.var[var] = dat[:, self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+        else:
+            print('4D variable reading not yet implemented')
+            # todo: >3D variable reading implementing
+            pass
 
     def fig_check_tide_bc(self):
 
@@ -239,14 +284,14 @@ class XBeachModelAnalysis():
 
         fig, ax = plt.subplots()
         plt.plot(t, zs[:, 0, 0], label='xb (1, 1)')
-        plt.plot(t_tide / 3600, zs0_tide[:,0], linestyle=':', label='bc (1, 1)')
+        plt.plot(t_tide / 3600, zs0_tide[:, 0], linestyle=':', label='bc (1, 1)')
 
         if tideloc == 2:
             if 'paulrevere' in self.params:
                 if self.params['paulrevere'] == 1:  # two sea conditions, no land conditions
                     plt.plot(t, zs[:, -1, 0], label='xb (ny, 1)')
                     plt.plot(t_tide / 3600, zs0_tide[:, 1], linestyle=':', label='bc (ny, 1)')
-                else:  #one offshore condition, one land condition
+                else:  # one offshore condition, one land condition
                     plt.plot(t, zs[:, 0, -1], label='xb (1,nx)')
                     plt.plot(t_tide / 3600, zs0_tide[:, 1], linestyle=':', label='bc (1, nx)')
             else:  # one offshore condition, one land condition
@@ -267,4 +312,67 @@ class XBeachModelAnalysis():
             plt.savefig(os.path.join(self.model_path, 'fig', 'wl_bc_check.png'), dpi=200)
         return fig, ax
 
+    def _fig_map_var(self, dat, label, **kwargs):
 
+        if self.plot_localcoords:
+            x = self.var['localx']
+            y = self.var['localy']
+        else:
+            x = self.var['globalx']
+            y = self.var['globaly']
+
+        fig, ax = plt.subplots()
+        im = ax.pcolor(x, y, dat, **kwargs)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        fig.colorbar(im, cax=cax, orientation='vertical', label=label)
+
+        if self.plot_localcoords:
+            if self.plot_km_coords:
+                ax.set_xlabel('along shore [km]')
+                ax.set_ylabel('cross shore [km]')
+            else:
+                ax.set_xlabel('along shore [m]')
+                ax.set_ylabel('cross shore [m]')
+        else:
+            if self.plot_km_coords:
+                ax.set_xlabel('x [km]')
+                ax.set_ylabel('y [km]')
+            else:
+                ax.set_xlabel('x [m]')
+                ax.set_ylabel('y [m]')
+
+        ax.set_aspect('equal')
+
+        return fig, ax
+
+    def fig_map_var(self, var, label, it=np.inf):
+
+        self.read_modeloutput(var)
+
+        if np.isinf(it):
+            it = len(self.var['globaltime']) - 1
+        assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
+
+        data = self.var[var][it, :, :]
+        fig, ax = self._fig_var(data, label)
+        return fig, ax
+
+    def fig_map_diffvar(self, var, label, it0=0, itend=np.inf):
+        assert itend > it0, 'itend must be larger than it0'
+        assert it0 >= 0, 'it0 should be >= 0'
+
+        self.read_modeloutput(var)
+
+        if np.isinf(itend):
+            itend = len(self.var['globaltime']) - 1
+        assert itend <= len(self.var['globaltime']) - 1, 'itend should be <= {}'.format(len(self.var['globaltime']) - 1)
+
+        var0 = self.var['zb'][it0, :, :]
+        varend = self.var['zb'][itend, :, :]
+
+        fig, ax = self._fig_var(varend - var0, label, **{'cmap': 'RdBu', 'norm': colors.CenteredNorm()})
+        ax.set_title('{:.1f}Hr - {:.1f}Hr'.format(self.var['globaltime'][itend] / 3600,
+                                                  self.var['globaltime'][it0] / 3600))
+
+        return fig, ax
