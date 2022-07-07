@@ -179,7 +179,7 @@ class XBeachModelAnalysis():
         self.get_vegetation()
         self.get_tide()
 
-    def read_output_coordinates(self):
+    def load_output_coordinates(self):
 
         ds = nc.Dataset(os.path.join(self.model_path, 'xboutput.nc'))
 
@@ -188,11 +188,20 @@ class XBeachModelAnalysis():
             self.var['meantime'] = ds.variables['meantime'][:]
         if self.params['npointvar'] > 0:
             self.var['pointtime'] = ds.variables['pointtime'][:]
-            self.var['station_id'] = ds.variables['station_id'][:]
+
+            station_list = []
+            dat = ds.variables['station_id'][:]
+            nb, nstat = dat.shape
+            for ib in range(nb) :
+                sn = ''
+                for istat in range(nstat):
+                    sn += dat.data[ib,istat].decode('UTF-8')
+                station_list.append(sn)
+            station_list = [x.strip() for x in station_list]
+            self.var['station_id'] = station_list
 
         x = ds.variables['globalx'][:]
         y = ds.variables['globaly'][:]
-
         if len(self.AOI) > 0:
             assert len(self.AOI) == 4, 'AOI should be specified as [x0, xend, y0, yend]'
 
@@ -236,7 +245,7 @@ class XBeachModelAnalysis():
         self.var['localy'], self.var['localx'] = np.meshgrid(self.var['cross'], self.var['along'])
         self.var['localx'] = np.flipud(self.var['localx'])  # to plot
 
-    def read_modeloutput(self, var):
+    def load_modeloutput(self, var):
         if var in self.var:
             pass
 
@@ -253,7 +262,7 @@ class XBeachModelAnalysis():
         # if not yet present, load coordinates
         if self.var == {}:
             print('loading model output coordinates from file')
-            self.read_output_coordinates()
+            self.load_output_coordinates()
 
         ds = nc.Dataset(os.path.join(self.model_path, 'xboutput.nc'))
         print('loading variable {} from file'.format(var))
@@ -275,18 +284,15 @@ class XBeachModelAnalysis():
         else:
             self.var[var] = dat
 
-    def get_pointoutput_by_station(self, var, station):
+    def get_modeloutput_by_station(self, var, station):
 
-        # truelist = [True if station in x for x in ds.var['station_id'] else False]
-        #
-        # index = next((i for i, e in enumerate(truelist) if e), None)
-        # assert index is not None, 'station not found in output'
-        #
-        # self.get_modeloutput(var)
-        #
-        # return self.var[var][:, index]
-        pass
+        truelist = [station in x for x in self.var['station_id']]
+        index = next((i for i, e in enumerate(truelist) if e), None)
+        assert index is not None, 'station not found in output'
 
+        self.load_modeloutput(var)
+
+        return np.ma.vstack([self.var['pointtime'], self.var[var][:, index]]).T
 
     def fig_check_tide_bc(self):
 
@@ -299,7 +305,7 @@ class XBeachModelAnalysis():
         zs0_tide = self.tide['zs0']
 
         # get model output
-        self.read_modeloutput('zs')
+        self.load_modeloutput('zs')
         zs = self.var['zs']
         t = self.var['globaltime'] / 3600
         tideloc = self.params['tideloc']
@@ -370,7 +376,7 @@ class XBeachModelAnalysis():
 
     def fig_map_var(self, var, label, it=np.inf):
 
-        self.read_modeloutput(var)
+        self.load_modeloutput(var)
 
         if np.isinf(it):
             it = len(self.var['globaltime']) - 1
@@ -386,7 +392,7 @@ class XBeachModelAnalysis():
         assert itend > it0, 'itend must be larger than it0'
         assert it0 >= 0, 'it0 should be >= 0'
 
-        self.read_modeloutput(var)
+        self.load_modeloutput(var)
 
         if np.isinf(itend):
             itend = len(self.var['globaltime']) - 1
