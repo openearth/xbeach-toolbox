@@ -188,15 +188,14 @@ class XBeachModelAnalysis():
             self.var['meantime'] = ds.variables['meantime'][:]
         if self.params['npointvar'] > 0:
             self.var['pointtime'] = ds.variables['pointtime'][:]
+            self.var['station_id'] = ds.variables['station_id'][:]
 
         x = ds.variables['globalx'][:]
         y = ds.variables['globaly'][:]
 
-        if len(self.AOI) == 0:
-            # if no AOI is specified, wit gets set to the whole grid
-            ny, nx = x.shape
-            self.AOI = [0, ny, 0, nx]
-        else:
+        if len(self.AOI) > 0:
+            assert len(self.AOI) == 4, 'AOI should be specified as [x0, xend, y0, yend]'
+
             x = x[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
             y = y[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
 
@@ -242,10 +241,10 @@ class XBeachModelAnalysis():
             pass
 
         elif 'mean' in var:
-            assert sum([var in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
+            assert sum([var[5:] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
             pass
         elif 'point' in var:
-            assert sum([var in x for x in self.params['pointvar']]) > 0, '{} not in xb output'
+            assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'
             pass
         else:
             assert sum([var in x for x in self.params['globalvar']]) > 0, '{} not in xb output'
@@ -259,16 +258,39 @@ class XBeachModelAnalysis():
         ds = nc.Dataset(os.path.join(self.model_path, 'xboutput.nc'))
         print('loading variable {} from file'.format(var))
         dat = ds.variables[var][:]
-        if len(dat.shape) == 2:
-            self.var[var] = dat[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
-        elif len(dat.shape) == 3:
-            self.var[var] = dat[:, self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+
+        if not ('point' in var):
+            if len(self.AOI) > 0:
+                print('slicing map output to AOI')
+                if len(dat.shape) == 2:
+                    self.var[var] = dat[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+                elif len(dat.shape) == 3:
+                    self.var[var] = dat[:, self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+                else:
+                    print('4D variable reading not yet implemented')
+                    # todo: >3D variable reading implementing
+                    pass
+            else:
+                self.var[var] = dat
         else:
-            print('4D variable reading not yet implemented')
-            # todo: >3D variable reading implementing
-            pass
+            self.var[var] = dat
+
+    def get_pointoutput_by_station(self, var, station):
+
+        # truelist = [True if station in x for x in ds.var['station_id'] else False]
+        #
+        # index = next((i for i, e in enumerate(truelist) if e), None)
+        # assert index is not None, 'station not found in output'
+        #
+        # self.get_modeloutput(var)
+        #
+        # return self.var[var][:, index]
+        pass
+
 
     def fig_check_tide_bc(self):
+
+        assert len(self.AOI) == 0, 'can only check the tide if zs0 is loaded on the entire model domain, so without AOI'
 
         # get model input
         if self.tide == {}:
@@ -355,7 +377,9 @@ class XBeachModelAnalysis():
         assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
 
         data = self.var[var][it, :, :]
-        fig, ax = self._fig_var(data, label)
+        fig, ax = self._fig_map_var(data, label)
+        ax.set_title('t = {:.1f}Hr'.format(self.var['globaltime'][it] / 3600))
+
         return fig, ax
 
     def fig_map_diffvar(self, var, label, it0=0, itend=np.inf):
@@ -371,7 +395,7 @@ class XBeachModelAnalysis():
         var0 = self.var['zb'][it0, :, :]
         varend = self.var['zb'][itend, :, :]
 
-        fig, ax = self._fig_var(varend - var0, label, **{'cmap': 'RdBu', 'norm': colors.CenteredNorm()})
+        fig, ax = self._fig_map_var(varend - var0, label, **{'cmap': 'RdBu', 'norm': colors.CenteredNorm()})
         ax.set_title('{:.1f}Hr - {:.1f}Hr'.format(self.var['globaltime'][itend] / 3600,
                                                   self.var['globaltime'][it0] / 3600))
 
