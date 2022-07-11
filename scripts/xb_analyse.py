@@ -98,7 +98,7 @@ class XBeachModelAnalysis():
 
         self.params = params
 
-    def get_grid(self):
+    def load_grid(self):
         # only works currently for xbeach type grids (xfile, yfile)
 
         # read params.txt if this is not done yet
@@ -174,7 +174,7 @@ class XBeachModelAnalysis():
 
     def load_model_setup(self):
         self.get_params()
-        self.get_grid()
+        self.load_grid()
         self.get_waves()
         self.get_vegetation()
         self.get_tide()
@@ -283,6 +283,10 @@ class XBeachModelAnalysis():
                 self.var[var] = dat
         else:
             self.var[var] = dat
+
+    def get_modeloutput(self, var):
+        self.load_modeloutput(var)
+        return self.var[var]
 
     def get_modeloutput_by_station(self, var, station):
 
@@ -406,3 +410,45 @@ class XBeachModelAnalysis():
                                                   self.var['globaltime'][it0] / 3600))
 
         return fig, ax
+
+    def plot_profile(self):
+        # plot cross-sections
+        x1, y1 = 117421.6, 560053.6
+        x2, y2 = 115469.4, 558176.2
+        iy1, ix1 = np.unravel_index(((x - x1) ** 2 + (y - y1) ** 2).argmin(), x.shape)
+        iy2, ix2 = np.unravel_index(((x - x2) ** 2 + (y - y2) ** 2).argmin(), x.shape)
+        ne = zb[0, :, :] - np.loadtxt(rundir + 'ne.txt')  # see erodible layer
+
+    def fig_profile_change(self, iy=None, coord=None):
+        if iy is None:
+            assert coord is not None, 'if no iy index is specified, a coordinate needs to be specified (xi,yi)'
+
+        zs = self.get_modeloutput('zs')
+        zb = self.get_modeloutput('zb')
+        cross = self.var['zs']  # because we are sure that after getting the above three variables this one is initialized
+
+        # only load the ne layer if one is in place
+        if int(self.params['struct']) == 1:
+            self.load_grid()
+            ne = self.grid['zb']
+
+        fig, ax = plt.subplots()
+        plt.plot(cross, np.nanmax(zs, axis=0)[iy, :], color='blue', label='zs-max')
+        plt.plot(cross, np.nanmin(zs, axis=0)[iy, :], color='royalblue', label='zs-min')
+        plt.plot(cross, zb[0, iy, :], color='k', label='pre')
+        plt.plot(cross, zb[-1, iy, :], color='r', label='post')
+
+        if int(self.params['struct']) == 1:
+            plt.fill_between(cross, zb[0, iy, :], ne[iy, :], color='lightgrey', label='erodible')
+            plt.fill_between(cross, ne[iy, :], -25, color='grey', label='non-erodible')
+        else:
+            plt.fill_between(cross, zb[0, iy, :], -25, color='lightgrey', label='erodible')
+
+        plt.title('profile iy = {}'.format(int(iy)))
+        plt.legend()
+        plt.xlabel('cross-shore [m]')
+        plt.ylabel('[m+NAP]')
+        plt.xlim([cross[0], cross[-1]])
+        plt.ylim([-25, 12])
+        plt.grid(linestyle=':', color='grey', linewidth=0.5)
+        return fig
