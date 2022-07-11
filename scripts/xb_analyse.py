@@ -14,7 +14,8 @@ class XBeachModelAnalysis():
     def __init__(self, fname, model_path):
         self.fname = fname
         self.model_path = model_path
-        self.params = None
+        self.get_params()
+        # self.params = None
         self.grd = {}
         self.waves_boundary = {}
         self.dat = {}
@@ -24,6 +25,7 @@ class XBeachModelAnalysis():
         self.plot_localcoords = False
         self.plot_km_coords = False
         self.AOI = []
+        self.globalstarttime = None
 
     def __repr__(self):
         return self.fname
@@ -31,6 +33,9 @@ class XBeachModelAnalysis():
     def set_save_fig(self, yesno):
         assert type(yesno) is bool, 'input type must be bool'
         self.save_fig = yesno
+        plotdir = os.path.join(self.model_path, 'fig')
+        if not os.path.isdir(plotdir):
+            os.mkdir(plotdir)
 
     def set_plot_localcoords(self, yesno):
         assert type(yesno) is bool, 'input type must be bool'
@@ -43,6 +48,10 @@ class XBeachModelAnalysis():
     def set_aoi(self, AOI):
         self.var = {}  # drop variables from memory because they need to be reloaded with appropriate AOI
         self.AOI = AOI
+
+    def set_globaltime(self, tstart):
+        assert type(tstart) is str, 'tstart must be given as a string of the format 2021-10-11T13:00:00'
+        self.globalstarttime = np.datetime64(tstart)
 
     def get_params(self):
         '''
@@ -183,11 +192,28 @@ class XBeachModelAnalysis():
 
         ds = nc.Dataset(os.path.join(self.model_path, 'xboutput.nc'))
 
-        self.var['globaltime'] = ds.variables['globaltime'][:]
+        # global variable time
+        if self.globalstarttime is None:
+            self.var['globaltime'] = ds.variables['globaltime'][:]
+        else:
+            self.var['globaltime']  = np.array([np.timedelta64(int(x), 's') for x in ds.variables['globaltime'][:].data]) \
+                                      + self.globalstarttime
+        # mean variable time
         if self.params['nmeanvar'] > 0:
-            self.var['meantime'] = ds.variables['meantime'][:]
+            if self.globalstarttime is None:
+                self.var['meantime'] = ds.variables['meantime'][:]
+            else:
+                self.var['meantime'] = np.array(
+                    [np.timedelta64(int(x), 's') for x in ds.variables['meantime'][:].data]) \
+                                         + self.globalstarttime
+        # point variable time
         if self.params['npointvar'] > 0:
-            self.var['pointtime'] = ds.variables['pointtime'][:]
+            if self.globalstarttime is None:
+                self.var['pointtime'] = ds.variables['pointtime'][:]
+            else:
+                self.var['pointtime'] = np.array(
+                    [np.timedelta64(int(x), 's') for x in ds.variables['pointtime'][:].data]) \
+                                         + self.globalstarttime
 
             station_list = []
             dat = ds.variables['station_id'][:]
@@ -290,13 +316,16 @@ class XBeachModelAnalysis():
 
     def get_modeloutput_by_station(self, var, station):
 
+        if len(self.var) == 0:
+            self.load_output_coordinates()
+
         truelist = [station in x for x in self.var['station_id']]
         index = next((i for i, e in enumerate(truelist) if e), None)
         assert index is not None, 'station not found in output'
 
         self.load_modeloutput(var)
 
-        return np.ma.vstack([self.var['pointtime'], self.var[var][:, index]]).T
+        return self.var['pointtime'], self.var[var][:, index]
 
     def fig_check_tide_bc(self):
 
@@ -389,7 +418,8 @@ class XBeachModelAnalysis():
         data = self.var[var][it, :, :]
         fig, ax = self._fig_map_var(data, label)
         ax.set_title('t = {:.1f}Hr'.format(self.var['globaltime'][it] / 3600))
-
+        if self.save_fig:
+            plt.savefig(os.path.join(self.model_path, 'fig', 'map_{}_it_{}.png'.format(var,it)), dpi=200)
         return fig, ax
 
     def fig_map_diffvar(self, var, label, it0=0, itend=np.inf):
@@ -408,16 +438,10 @@ class XBeachModelAnalysis():
         fig, ax = self._fig_map_var(varend - var0, label, **{'cmap': 'RdBu', 'norm': colors.CenteredNorm()})
         ax.set_title('{:.1f}Hr - {:.1f}Hr'.format(self.var['globaltime'][itend] / 3600,
                                                   self.var['globaltime'][it0] / 3600))
-
+        if self.save_fig:
+            plt.savefig(os.path.join(self.model_path, 'fig', 'difmap_{}_it_{}-{}.png'.format(var, itend, it0)), dpi=200)
         return fig, ax
 
-    def plot_profile(self):
-        # plot cross-sections
-        x1, y1 = 117421.6, 560053.6
-        x2, y2 = 115469.4, 558176.2
-        iy1, ix1 = np.unravel_index(((x - x1) ** 2 + (y - y1) ** 2).argmin(), x.shape)
-        iy2, ix2 = np.unravel_index(((x - x2) ** 2 + (y - y2) ** 2).argmin(), x.shape)
-        ne = zb[0, :, :] - np.loadtxt(rundir + 'ne.txt')  # see erodible layer
 
     def fig_profile_change(self, iy=None, coord=None):
         if iy is None:
@@ -425,12 +449,13 @@ class XBeachModelAnalysis():
 
         zs = self.get_modeloutput('zs')
         zb = self.get_modeloutput('zb')
-        cross = self.var['zs']  # because we are sure that after getting the above three variables this one is initialized
+        cross = self.var['cross']  # because we are sure that after getting the above three variables this one is initialized
 
         # only load the ne layer if one is in place
         if int(self.params['struct']) == 1:
             self.load_grid()
-            ne = self.grid['zb']
+            ne = zb[0, :, :]-self.grd['ne']
+
 
         fig, ax = plt.subplots()
         plt.plot(cross, np.nanmax(zs, axis=0)[iy, :], color='blue', label='zs-max')
@@ -451,4 +476,8 @@ class XBeachModelAnalysis():
         plt.xlim([cross[0], cross[-1]])
         plt.ylim([-25, 12])
         plt.grid(linestyle=':', color='grey', linewidth=0.5)
-        return fig
+
+        if self.save_fig:
+            plt.savefig(os.path.join(self.model_path, 'fig', 'profile_change_iy_.png'.format(iy)), dpi=200)
+
+        return fig, ax
