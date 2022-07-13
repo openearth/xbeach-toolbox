@@ -77,6 +77,7 @@ class XBeachModelAnalysis():
         # global variables
         i0 = [i for i, var in enumerate(dat) if 'nglobalvar' in var][0]
         params['globalvar'] = dat[i0+1:i0+int(params['nglobalvar']+1)]
+
         # mean variables
         ixlist = [i for i, var in enumerate(dat) if 'nmeanvar' in var]
         if len(ixlist) > 0:
@@ -197,23 +198,27 @@ class XBeachModelAnalysis():
         if self.globalstarttime is None:
             self.var['globaltime'] = ds.variables['globaltime'][:]
         else:
-            self.var['globaltime']  = np.array([np.timedelta64(int(x), 's') for x in ds.variables['globaltime'][:].data]) \
+            self.var['globaltime'] = np.array([np.timedelta64(int(x), 's') for x in ds.variables['globaltime'][:].data]) \
                                       + self.globalstarttime
         # mean variable time
         if self.params['nmeanvar'] > 0:
             if self.globalstarttime is None:
                 self.var['meantime'] = ds.variables['meantime'][:]
             else:
+                data = ds.variables['meantime'][:]
+                data = data[data.mask == False]
                 self.var['meantime'] = np.array(
-                    [np.timedelta64(int(x), 's') for x in ds.variables['meantime'][:].data]) \
+                    [np.timedelta64(int(x), 's') for x in data.data.flatten()]) \
                                          + self.globalstarttime
         # point variable time
         if self.params['npointvar'] > 0:
             if self.globalstarttime is None:
                 self.var['pointtime'] = ds.variables['pointtime'][:]
             else:
+                data = ds.variables['pointtime'][:]
+                data = data[data.mask == False]
                 self.var['pointtime'] = np.array(
-                    [np.timedelta64(int(x), 's') for x in ds.variables['pointtime'][:].data]) \
+                    [np.timedelta64(int(x), 's') for x in data.data.flatten()]) \
                                          + self.globalstarttime
 
             station_list = []
@@ -291,6 +296,15 @@ class XBeachModelAnalysis():
         ds = nc.Dataset(os.path.join(self.model_path, 'xboutput.nc'))
         print('loading variable {} from file'.format(var))
         dat = ds.variables[var][:]
+
+        #mean and point output might not be availble if the eor is not reached. Therefore cut
+        if 'point' in var and len(np.atleast_1d(dat.mask)) > 1:
+            dat = dat[~dat.mask[:, 0], :]
+        elif len(dat.shape) == 3 and 'mean' in var and len(np.atleast_1d(dat.mask)) > 1:
+            dat = dat[~dat.mask[:, 0, 0], :, :]
+        elif len(dat.shape) == 2 and 'mean' in var and len(np.atleast_1d(dat.mask)) > 1:
+            # 1D case
+            pass
 
         if not ('point' in var):
             if len(self.AOI) > 0:
