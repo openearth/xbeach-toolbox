@@ -4,6 +4,7 @@ import netCDF4 as nc
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.colors as colors
+import matplotlib.dates as mdates
 
 
 class XBeachModelAnalysis():
@@ -49,7 +50,7 @@ class XBeachModelAnalysis():
         self.var = {}  # drop variables from memory because they need to be reloaded with appropriate AOI
         self.AOI = AOI
 
-    def set_globaltime(self, tstart):
+    def set_globalstarttime(self, tstart):
         assert type(tstart) is str, 'tstart must be given as a string of the format 2021-10-11T13:00:00'
         self.globalstarttime = np.datetime64(tstart)
 
@@ -273,17 +274,14 @@ class XBeachModelAnalysis():
 
     def load_modeloutput(self, var):
         if var in self.var:
-            pass
+            return
 
-        elif 'mean' in var:
+        if 'mean' in var:
             assert sum([var[5:] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
-            pass
         elif 'point' in var:
             assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'
-            pass
         else:
             assert sum([var in x for x in self.params['globalvar']]) > 0, '{} not in xb output'
-            pass
 
         # if not yet present, load coordinates
         if self.var == {}:
@@ -327,6 +325,16 @@ class XBeachModelAnalysis():
 
         return self.var['pointtime'], self.var[var][:, index]
 
+    def _mdates_concise_subplot_axes(self, ax):
+        major_locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
+        formatter = mdates.ConciseDateFormatter(major_locator)
+        # see whether we can iterate through ax, if not than cast in list so we can
+        try:
+            [axi.xaxis.set_major_formatter(formatter) for axi in ax]
+        except:
+            ax.xaxis.set_major_formatter(formatter)
+
+
     def fig_check_tide_bc(self):
 
         assert len(self.AOI) == 0, 'can only check the tide if zs0 is loaded on the entire model domain, so without AOI'
@@ -334,41 +342,51 @@ class XBeachModelAnalysis():
         # get model input
         if self.tide == {}:
             self.get_tide()
-        t_tide = self.tide['time']
+
         zs0_tide = self.tide['zs0']
+        if self.globalstarttime is None:
+            t_tide = self.tide['time']
+        else:
+            t_tide = np.array(
+                [np.timedelta64(int(x), 's') for x in self.tide['time']]) \
+                                     + self.globalstarttime
 
         # get model output
         self.load_modeloutput('zs')
         zs = self.var['zs']
-        t = self.var['globaltime'] / 3600
+        t = self.var['globaltime']
         tideloc = self.params['tideloc']
 
         fig, ax = plt.subplots()
         plt.plot(t, zs[:, 0, 0], label='xb (1, 1)')
-        plt.plot(t_tide / 3600, zs0_tide[:, 0], linestyle=':', label='bc (1, 1)')
+        plt.plot(t_tide, zs0_tide[:, 0], linestyle=':', label='bc (1, 1)')
 
         if tideloc == 2:
             if 'paulrevere' in self.params:
                 if self.params['paulrevere'] == 1:  # two sea conditions, no land conditions
                     plt.plot(t, zs[:, -1, 0], label='xb (ny, 1)')
-                    plt.plot(t_tide / 3600, zs0_tide[:, 1], linestyle=':', label='bc (ny, 1)')
+                    plt.plot(t_tide, zs0_tide[:, 1], linestyle=':', label='bc (ny, 1)')
                 else:  # one offshore condition, one land condition
                     plt.plot(t, zs[:, 0, -1], label='xb (1,nx)')
-                    plt.plot(t_tide / 3600, zs0_tide[:, 1], linestyle=':', label='bc (1, nx)')
+                    plt.plot(t_tide, zs0_tide[:, 1], linestyle=':', label='bc (1, nx)')
             else:  # one offshore condition, one land condition
                 plt.plot(t, zs[:, 0, -1], label='xb (1,nx)')
-                plt.plot(t_tide / 3600, zs0_tide[:, 1], linestyle=':', label='bc (1, nx)')
+                plt.plot(t_tide, zs0_tide[:, 1], linestyle=':', label='bc (1, nx)')
         elif tideloc == 4:
             plt.plot(t, zs[:, -1, 0], label='xb (ny, 1)')
-            plt.plot(t_tide / 3600, zs0_tide[:, 1], linestyle=':', label='bc (ny, 1)')
+            plt.plot(t_tide, zs0_tide[:, 1], linestyle=':', label='bc (ny, 1)')
             plt.plot(t, zs[:, -1, -1], label='xb (ny, nx)')
-            plt.plot(t_tide / 3600, zs0_tide[:, 2], linestyle=':', label='bc (ny, nx)')
+            plt.plot(t_tide, zs0_tide[:, 2], linestyle=':', label='bc (ny, nx)')
             plt.plot(t, zs[:, 0, -1], label='xb (1, nx)')
-            plt.plot(t_tide / 3600, zs0_tide[:, 3], linestyle=':', label='bc (1, nx)')
+            plt.plot(t_tide, zs0_tide[:, 3], linestyle=':', label='bc (1, nx)')
 
         plt.legend()
         plt.xlabel('t [hr]')
         plt.ylabel('zs offshore')
+
+        if self.globalstarttime is not None:
+            self._mdates_concise_subplot_axes(ax)
+
         if self.save_fig:
             plt.savefig(os.path.join(self.model_path, 'fig', 'wl_bc_check.png'), dpi=200)
         return fig, ax
@@ -386,7 +404,10 @@ class XBeachModelAnalysis():
         im = ax.pcolor(x, y, dat, **kwargs)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
-        fig.colorbar(im, cax=cax, orientation='vertical', label=label)
+        if 'vmin' in kwargs:
+            fig.colorbar(im, cax=cax, orientation='vertical', label=label, extend='both')
+        else:
+            fig.colorbar(im, cax=cax, orientation='vertical', label=label)
 
         if self.plot_localcoords:
             if self.plot_km_coords:
@@ -417,14 +438,23 @@ class XBeachModelAnalysis():
 
         data = self.var[var][it, :, :]
         fig, ax = self._fig_map_var(data, label)
-        ax.set_title('t = {:.1f}Hr'.format(self.var['globaltime'][it] / 3600))
+
+        if self.globalstarttime is None:
+            ax.set_title('t = {:.1f}Hr'.format(self.var['globaltime'][it] ))
+        else:
+            ax.set_title('t = {}'.format(self.var['globaltime'][it]))
         if self.save_fig:
             plt.savefig(os.path.join(self.model_path, 'fig', 'map_{}_it_{}.png'.format(var,it)), dpi=200)
         return fig, ax
 
-    def fig_map_diffvar(self, var, label, it0=0, itend=np.inf):
+    def fig_map_diffvar(self, var, label, it0=0, itend=np.inf, clim=None):
         assert itend > it0, 'itend must be larger than it0'
         assert it0 >= 0, 'it0 should be >= 0'
+
+        if clim is None:
+            kwargs = {'cmap': 'RdBu', 'norm': colors.CenteredNorm()}
+        else:
+            kwargs = {'cmap': 'RdBu', 'vmin': clim[0], 'vmax': clim[1]}
 
         self.load_modeloutput(var)
 
@@ -435,9 +465,16 @@ class XBeachModelAnalysis():
         var0 = self.var['zb'][it0, :, :]
         varend = self.var['zb'][itend, :, :]
 
-        fig, ax = self._fig_map_var(varend - var0, label, **{'cmap': 'RdBu', 'norm': colors.CenteredNorm()})
-        ax.set_title('{:.1f}Hr - {:.1f}Hr'.format(self.var['globaltime'][itend] / 3600,
-                                                  self.var['globaltime'][it0] / 3600))
+        fig, ax = self._fig_map_var(varend - var0, label, **kwargs)
+
+        #make title
+        if self.globalstarttime is None:
+            ax.set_title('{:.1f}Hr - {:.1f}Hr'.format(self.var['globaltime'][itend],
+                                                  self.var['globaltime'][it0]))
+        else:
+            ax.set_title('{} - {}'.format(self.var['globaltime'][itend],
+                                                      self.var['globaltime'][it0]))
+
         if self.save_fig:
             plt.savefig(os.path.join(self.model_path, 'fig', 'difmap_{}_it_{}-{}.png'.format(var, itend, it0)), dpi=200)
         return fig, ax
@@ -454,7 +491,11 @@ class XBeachModelAnalysis():
         # only load the ne layer if one is in place
         if int(self.params['struct']) == 1:
             self.load_grid()
-            ne = zb[0, :, :]-self.grd['ne']
+            if len(self.AOI) > 0:
+                ne = self.grd['ne'][self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+            else:
+                ne = self.grd['ne']
+            ne = zb[0, :, :]-ne
 
 
         fig, ax = plt.subplots()
@@ -478,6 +519,6 @@ class XBeachModelAnalysis():
         plt.grid(linestyle=':', color='grey', linewidth=0.5)
 
         if self.save_fig:
-            plt.savefig(os.path.join(self.model_path, 'fig', 'profile_change_iy_.png'.format(iy)), dpi=200)
+            plt.savefig(os.path.join(self.model_path, 'fig', 'profile_change_iy{}.png'.format(iy)), dpi=200)
 
         return fig, ax
