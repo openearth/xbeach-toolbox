@@ -1,5 +1,5 @@
 import numpy as np
-
+from shapely.geometry import Polygon, Point
 
 def dispersion(w,d):
     '''
@@ -254,7 +254,7 @@ def in_polygon(x,y,poli):
     Revision 0 
     '''
     ny,nx = x.shape
-    p = [Point(ix,iy) for ix,iy in zip(x.flatten(),y.flatten())]
+    p = [Point(ix, iy) for ix, iy in zip(x.flatten(),y.flatten())]
     # pdb.set_trace()
     ip = np.array([poli.contains(p[i]) for i in range(len(p))]).reshape(ny,nx)
     return ip 
