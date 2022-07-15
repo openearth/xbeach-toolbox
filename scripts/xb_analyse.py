@@ -337,7 +337,12 @@ class XBeachModelAnalysis():
 
         self.load_modeloutput(var)
 
-        return self.var['pointtime'], self.var[var][:, index]
+        #in case the modelrun is not yet finished, make sure the time and his len is equal
+        lent = len(self.var['pointtime'])
+        lentvar = len(self.var[var][:, 0])
+        Nt = np.min([lent, lentvar])
+
+        return self.var['pointtime'][:Nt-1], self.var[var][:Nt-1, index]
 
     def _mdates_concise_subplot_axes(self, ax):
         major_locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
