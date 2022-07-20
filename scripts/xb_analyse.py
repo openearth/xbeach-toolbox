@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.colors as colors
 import matplotlib.dates as mdates
+import scipy as sc
+import xbeachtools as xb
+from modplot import velovect
 
 
 class XBeachModelAnalysis():
@@ -247,6 +250,8 @@ class XBeachModelAnalysis():
             self.var['globalx'] = x
             self.var['globaly'] = y
 
+        self.var['gridang'] = np.arctan2(y[0, 0]-y[-1, 0], x[0, 0]-x[-1, 0])
+
         def path_distance(polx, poly):
             '''
             computes the distance along a polyline
@@ -276,6 +281,8 @@ class XBeachModelAnalysis():
 
         self.var['localy'], self.var['localx'] = np.meshgrid(self.var['cross'], self.var['along'])
         self.var['localx'] = np.flipud(self.var['localx'])  # to plot
+
+
 
     def load_modeloutput(self, var):
         if var in self.var:
@@ -410,7 +417,7 @@ class XBeachModelAnalysis():
             plt.savefig(os.path.join(self.model_path, 'fig', 'wl_bc_check.png'), dpi=200)
         return fig, ax
 
-    def _fig_map_var(self, dat, label, **kwargs):
+    def _fig_map_var(self, dat, label, figsize=None, **kwargs):
 
         if self.plot_localcoords:
             x = self.var['localx']
@@ -419,7 +426,7 @@ class XBeachModelAnalysis():
             x = self.var['globalx']
             y = self.var['globaly']
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=figsize)
         im = ax.pcolor(x, y, dat, **kwargs)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -540,4 +547,59 @@ class XBeachModelAnalysis():
         if self.save_fig:
             plt.savefig(os.path.join(self.model_path, 'fig', 'profile_change_iy{}.png'.format(iy)), dpi=200)
 
+        return fig, ax
+
+    def fig_map_quiver(self, var=['ue', 've'], label='ue [m/s]', it=np.inf, streamspacing=50,
+                       figsize=None, **kwargs):
+        '''
+        plots map plots of map output, only works for rectilinear grids (that can be of varying grid resolution).
+        Does not work for curvilinear grids!
+        '''
+
+        ja_plot_localcoords = self.plot_localcoords
+
+        if ja_plot_localcoords is False:
+            self.set_plot_localcoords(True)
+
+        self.load_modeloutput(var[0])
+        self.load_modeloutput(var[1])
+
+        if np.isinf(it):
+            it = len(self.var['globaltime']) - 1
+        assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
+
+        data = np.sqrt((self.var[var[0]][it, :, :]) ** 2 + (self.var[var[1]][it, :, :]) ** 2)
+
+        x = np.flipud(self.var['localx'].data)
+        y = np.flipud(self.var['localy'].data)
+        u = np.flipud(self.var[var[0]][it, :, :].data)
+        v = np.flipud(self.var[var[1]][it, :, :].data)
+        u[u < -100] = 0
+        v[v < -100] = 0
+
+        u, v = xb.rotate_grid(u, v, self.var['gridang'])
+
+        fu = sc.interpolate.interp2d(x[:, 0], y[0, :], u.T)
+        fv = sc.interpolate.interp2d(x[:, 0], y[0, :], v.T)
+
+        xt = np.arange(x[0, 0], x[-1, 0], streamspacing)
+        yt = np.arange(y[0, 0], y[0, -1], streamspacing)
+        X,Y = np.meshgrid(xt,yt)
+        ut = fu(xt, yt)
+        vt = fv(xt, yt)
+
+        fig, ax = self._fig_map_var(data, label,figsize=figsize, **{'cmap': 'jet'})
+        ax.quiver(X, Y, ut, vt, color='w', units='xy', pivot='middle', **kwargs)
+        # ax.streamplot(X, Y, ut, vt, color='k')
+
+        fig.tight_layout()
+        if self.globalstarttime is None:
+            ax.set_title('t = {:.1f}Hr'.format(self.var['globaltime'][it] ))
+        else:
+            ax.set_title('t = {}'.format(self.var['globaltime'][it]))
+        if self.save_fig:
+            plt.savefig(os.path.join(self.model_path, 'fig', 'map_quiver_{}_it_{}.png'.format(var[0],it)), dpi=200)
+
+        if ja_plot_localcoords is False:
+            self.set_plot_localcoords(False)
         return fig, ax
