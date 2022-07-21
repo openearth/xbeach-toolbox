@@ -381,10 +381,11 @@ class XBeachModelAnalysis():
         self.load_modeloutput('zs')
         zs = self.var['zs']
         t = self.var['globaltime']
+        lent = min([len(zs), len(t)])
         tideloc = self.params['tideloc']
 
         fig, ax = plt.subplots()
-        plt.plot(t, zs[:, 0, 0], label='xb (1, 1)')
+        plt.plot(t[:lent-1], zs[:lent-1, 0, 0], label='xb (1, 1)')
         plt.plot(t_tide, zs0_tide[:, 0], linestyle=':', label='bc (1, 1)')
 
         if tideloc == 2:
@@ -411,7 +412,12 @@ class XBeachModelAnalysis():
         plt.ylabel('zs offshore')
 
         if self.globalstarttime is not None:
-            self._mdates_concise_subplot_axes(ax)
+            # Define the date format
+            ax.xaxis.set_major_formatter(DateFormatter("%m-%d"))
+            ax.xaxis.set_minor_formatter(DateFormatter("%H:%M"))
+            # Ensure a major tick for each week using (interval=1) and minor tick each 6 hours
+            ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+            ax.xaxis.set_minor_locator(IndexLocator(base=6 / 24, offset=0))
 
         if self.save_fig:
             plt.savefig(os.path.join(self.model_path, 'fig', 'wl_bc_check.png'), dpi=200)
@@ -431,9 +437,9 @@ class XBeachModelAnalysis():
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
         if 'vmin' in kwargs:
-            fig.colorbar(im, cax=cax, orientation='vertical', label=label, extend='both')
+            fig.colorbar(im, cax=cax, orientation='vertical', label=label, extend='both', format='{:.1f}')
         else:
-            fig.colorbar(im, cax=cax, orientation='vertical', label=label)
+            fig.colorbar(im, cax=cax, orientation='vertical', label=label, format='{:.1f}')
 
         if self.plot_localcoords:
             if self.plot_km_coords:
@@ -550,7 +556,7 @@ class XBeachModelAnalysis():
         return fig, ax
 
     def fig_map_quiver(self, var=['ue', 've'], label='ue [m/s]', it=np.inf, streamspacing=50,
-                       figsize=None, **kwargs):
+                       figsize=None, vmax=None, vmin=None, **kwargs):
         '''
         plots map plots of map output, only works for rectilinear grids (that can be of varying grid resolution).
         Does not work for curvilinear grids!
@@ -588,7 +594,7 @@ class XBeachModelAnalysis():
         ut = fu(xt, yt)
         vt = fv(xt, yt)
 
-        fig, ax = self._fig_map_var(data, label,figsize=figsize, **{'cmap': 'jet'})
+        fig, ax = self._fig_map_var(data, label,figsize=figsize, **{'cmap': 'jet', 'vmax': vmax, 'vmin': vmin})
         ax.quiver(X, Y, ut, vt, color='w', units='xy', pivot='middle', **kwargs)
         # ax.streamplot(X, Y, ut, vt, color='k')
 
@@ -598,7 +604,7 @@ class XBeachModelAnalysis():
         else:
             ax.set_title('t = {}'.format(self.var['globaltime'][it]))
         if self.save_fig:
-            plt.savefig(os.path.join(self.model_path, 'fig', 'map_quiver_{}_it_{}.png'.format(var[0],it)), dpi=200)
+            plt.savefig(os.path.join(self.model_path, 'fig', 'map_quiver_{}_it_{}.png'.format(var[0], it)), dpi=200)
 
         if ja_plot_localcoords is False:
             self.set_plot_localcoords(False)
