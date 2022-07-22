@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.colors as colors
 import matplotlib.dates as mdates
-import scipy as sc
+from matplotlib.dates import DateFormatter
+from matplotlib.ticker import FuncFormatter, IndexLocator
+from scipy.interpolate import interp2d
 import xbeachtools as xb
-from modplot import velovect
 
 
 class XBeachModelAnalysis():
@@ -436,10 +437,11 @@ class XBeachModelAnalysis():
         im = ax.pcolor(x, y, dat, **kwargs)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
+        fmt = lambda x, pos: '{:.1f}'.format(x)
         if 'vmin' in kwargs:
-            fig.colorbar(im, cax=cax, orientation='vertical', label=label, extend='both', format='{:.1f}')
+            fig.colorbar(im, cax=cax, orientation='vertical', label=label, extend='both', format=FuncFormatter(fmt))
         else:
-            fig.colorbar(im, cax=cax, orientation='vertical', label=label, format='{:.1f}')
+            fig.colorbar(im, cax=cax, orientation='vertical', label=label, format=FuncFormatter(fmt))
 
         if self.plot_localcoords:
             if self.plot_km_coords:
@@ -585,8 +587,8 @@ class XBeachModelAnalysis():
 
         u, v = xb.rotate_grid(u, v, self.var['gridang'])
 
-        fu = sc.interpolate.interp2d(x[:, 0], y[0, :], u.T)
-        fv = sc.interpolate.interp2d(x[:, 0], y[0, :], v.T)
+        fu = interp2d(x[:, 0], y[0, :], u.T)
+        fv = interp2d(x[:, 0], y[0, :], v.T)
 
         xt = np.arange(x[0, 0], x[-1, 0], streamspacing)
         yt = np.arange(y[0, 0], y[0, -1], streamspacing)
