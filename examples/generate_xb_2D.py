@@ -8,9 +8,10 @@ import os
 
 
 ## import xbeach tools
-sys.path.append(os.path.join('..','scripts' ))
-from xbeachtools import xgrid, ygrid, seaward_extend, XBeachModelSetup
+sys.path.append(os.path.abspath(os.path.join('..','scripts' )))
 
+from xbeachtools import xgrid, ygrid, seaward_extend, XBeachModelSetup, offshore_depth, lateral_extend
+plt.style.use(os.path.join('..','scripts','xb.mplstyle'))
 ###############################################################################
 ###  load data                                                              ###
 ###############################################################################
@@ -33,10 +34,16 @@ X, Y = np.meshgrid(x,y)
 ## plot
 plt.figure()
 plt.pcolor(x,y,bathy)
+plt.colorbar()
+plt.xlabel('x [m]')
+plt.ylabel('y [m]')
+plt.title('bathy')
 
 fig     = plt.figure()
 ax      = Axes3D(fig)
 surf    = ax.plot_surface(X, Y, bathy, cmap=cm.coolwarm,  linewidth=0, antialiased=False)
+plt.xlabel('x [m]')
+plt.ylabel('y [m]')
 
 
 ###############################################################################
@@ -49,6 +56,9 @@ xgr,zgr = xgrid(x, bathy[20,:],dxmin=2)
 plt.figure()
 plt.plot(x,bathy[20,:],'-o')
 plt.plot(xgr,zgr,'.-')
+plt.legend(['Bathy','xgr'])
+plt.xlabel('x [m]')
+plt.ylabel('z [m]')
 
 
 ###############################################################################
@@ -58,8 +68,11 @@ plt.plot(xgr,zgr,'.-')
 ygr = ygrid(y)
 
 plt.figure()
-plt.plot(y,'-o')
-plt.plot(ygr,'.-')
+plt.plot(y[:-1],np.diff(y),'-o')
+plt.plot(ygr[:-1],np.diff(ygr),'.-')
+plt.legend(['y','ygr'])
+plt.xlabel('y [m]')
+plt.ylabel('dy [m]')
 
 ###############################################################################
 ###  interpolate                                                            ###
@@ -71,12 +84,16 @@ zgr = f(xgr,ygr)
 
 plt.figure()
 plt.pcolor(xgr,ygr,zgr)
+plt.xlabel('x [m]')
+plt.ylabel('y [m]')
+plt.title('xb bathy')
+
 
 xgr, ygr = np.meshgrid(xgr,ygr)
 ###############################################################################
 ###  seaward extend                                                         ###
 ###############################################################################
-
+d_start, slope, Hm0_shoal = offshore_depth(Hm0=9, Tp=15, depth_offshore_profile=abs(bathy[0,0]), depth_boundary_conditions=20)
 
 xgr, ygr, zgr = seaward_extend(xgr,ygr,zgr,slope=1/20,depth=-20)
 
@@ -85,6 +102,18 @@ plt.pcolor(xgr,ygr,zgr)
 
 plt.figure()
 plt.plot(xgr[:,:].T,zgr[:,:].T)
+plt.xlabel('x [m]')
+plt.ylabel('z [m]')
+
+###############################################################################
+###  lateral extend                                                         ###
+###############################################################################
+
+
+xgr,ygr,zgr = lateral_extend(xgr,ygr,zgr,n=5)
+
+plt.figure()
+plt.pcolor(xgr,ygr,zgr)
 
 ###############################################################################
 ###  create model setup                                                     ###
@@ -101,7 +130,7 @@ print(xb_setup)
 xb_setup.set_grid(xgr,ygr,zgr)
 
 #xb_setup.set_waves('jons',{'Hm0':2,'Tp':5,'gammajsp':3.3, 's' : 10000, 'mainang':270,'fnyq':1})
-xb_setup.set_waves('jonstable',{'Hm0':[2],'Tp':[5],'gammajsp':[3.3], 's' : [10000], 'mainang':[270],'duration':[3600],'dtbc':[1]})
+xb_setup.set_waves('jonstable',{'Hm0':[1.5, 2, 1.5],'Tp':[4, 5, 4],'gammajsp':[3.3, 3.3, 3.3], 's' : [20,20,20], 'mainang':[270,280, 290],'duration':[3600, 3600, 3600],'dtbc':[1,1,1]})
 
 xb_setup.set_params({'Wavemodel':'surfbeat',
                      'morphology':0,
@@ -112,5 +141,8 @@ xb_setup.set_params({'Wavemodel':'surfbeat',
                      'npoints':['1 0', '6 0', '10 0', '12 0']})
 
 
+sim_path = os.path.join('xb-2D')
+if not os.path.exists(sim_path):
+    os.mkdir(sim_path)
+xb_setup.write_model(os.path.join(sim_path))
 
-xb_setup.write_model(os.path.join('test'))
