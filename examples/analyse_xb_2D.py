@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from scripts.xb_analyse import XBeachModelAnalysis
 
-r03 = XBeachModelAnalysis('r03', r'c:\Users\marliesvanderl\phd\modeling\rvw_phzd\runs\r03')
+r03 = XBeachModelAnalysis('r03', r'd:\\Repositories\\xbeach_toolbox\\xbeach-toolbox-trunk\\xbeach-toolbox\\examples\\xb-1D\\')
 
 # load the xbeach model set-up
 r03.load_model_setup()
