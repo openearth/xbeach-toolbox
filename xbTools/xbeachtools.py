@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 import matplotlib.pyplot as plt
 
-
+from xbTools.wave_functions import dispersion, wavecelerity
 
 
 def xb_run_win(xb, path_exe):
