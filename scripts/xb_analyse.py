@@ -9,6 +9,7 @@ from matplotlib.dates import DateFormatter
 from matplotlib.ticker import FuncFormatter, IndexLocator
 from scipy.interpolate import interp2d
 import xbeachtools as xb
+import warnings
 
 
 class XBeachModelAnalysis():
@@ -563,6 +564,7 @@ class XBeachModelAnalysis():
         plots map plots of map output, only works for rectilinear grids (that can be of varying grid resolution).
         Does not work for curvilinear grids!
         '''
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
 
         ja_plot_localcoords = self.plot_localcoords
 
