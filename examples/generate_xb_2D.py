@@ -137,6 +137,7 @@ xb_setup.set_params({'Wavemodel':'surfbeat',
                      'befriccoef':0.01,
                      'tstop':3600,
                      'nglobalvar':['zb','zs','H'],
+                     'npointvar':['zs','H'],
                      'nmeanvar':['zb'],
                      'npoints':['1 0', '6 0', '10 0', '12 0']})
 

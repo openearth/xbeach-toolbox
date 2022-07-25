@@ -828,7 +828,7 @@ class XBeachModelSetup():
         ##
         if wbctype=='jonstable':
             required_par = ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc']
-        elif wbctype=='jons':
+        elif wbctype=='params':
             required_par = ['Hm0','Tp','mainang','gammajsp','s','fnyq']
         else:
             assert False, 'Wrong wbctype'
