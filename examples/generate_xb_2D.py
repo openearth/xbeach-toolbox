@@ -8,10 +8,10 @@ import os
 
 
 ## import xbeach tools
-sys.path.append(os.path.abspath(os.path.join('..','scripts' )))
+sys.path.append(os.path.abspath(os.path.join('..' )))
 
-from xbeachtools import xgrid, ygrid, seaward_extend, XBeachModelSetup, offshore_depth, lateral_extend
-plt.style.use(os.path.join('..','scripts','xb.mplstyle'))
+from xbTools import xgrid, ygrid, seaward_extend, XBeachModelSetup, offshore_depth, lateral_extend
+plt.style.use(os.path.join('..','xbTools','xb.mplstyle'))
 ###############################################################################
 ###  load data                                                              ###
 ###############################################################################

@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 import matplotlib.pyplot as plt
 
-from wave_functions import *
+
 
 
 def xb_run_win(xb, path_exe):
