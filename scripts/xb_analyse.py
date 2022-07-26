@@ -8,7 +8,7 @@ import matplotlib.dates as mdates
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import FuncFormatter, IndexLocator
 from scipy.interpolate import interp2d
-import xbeachtools as xb
+import xbTools as xb
 import warnings
 
 
