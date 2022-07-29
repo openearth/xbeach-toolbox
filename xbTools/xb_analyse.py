@@ -290,9 +290,9 @@ class XBeachModelAnalysis():
         if var in self.var:
             return
 
-        if 'mean' in var:
+        if '_mean' in var:
             assert sum([var[5:] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
-        elif 'point' in var:
+        elif '_point' in var:
             assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'
         else:
             assert sum([var in x for x in self.params['globalvar']]) > 0, '{} not in xb output'
