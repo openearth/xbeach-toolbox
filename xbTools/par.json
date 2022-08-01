@@ -1,4 +1,4 @@
-{"Physical processes":["wavemodel","sedtrans","morphology","vegetation","ships","wind","viscosity","swrunup","swave","snells","single_dir","setbathy","gwflow","avalanching"],
+{"Physical processes":["sedtrans","morphology","vegetation","ships","wind","viscosity","swrunup","swave","snells","single_dir","setbathy","gwflow","avalanching"],
 "Initial conditions":["zs0","zsinitfile","hotstartflow"],
 "Physical constants":["befriccoef"],
 "Model time":["tstop","CFL"],
