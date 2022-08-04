@@ -3,11 +3,32 @@ import os
 from datetime import datetime
 import json
 import matplotlib.pyplot as plt
+from shapely.geometry import Point
 
 from xbTools.wave_functions import dispersion, wavecelerity
 
 
-def xb_run_win(xb, path_exe):
+def xb_run_script_win(xb, N, maindir, xbeach_exe):
+    '''
+    
+
+    Parameters
+    ----------
+    xb : list of class
+        list with simulation paths.
+    N : TYPE
+        number of run scripts.
+    maindir : TYPE
+        path where run script are created.
+    xbeach_exe : TYPE
+        path of exe.
+
+    Returns
+    -------
+    None.
+
+    '''
+
     
     if isinstance(xb,list):
         if isinstance(xb[0],XBeachModelSetup):
@@ -15,11 +36,33 @@ def xb_run_win(xb, path_exe):
             for item in xb:
                 path_sims.append(item.model_path)
         elif isinstance(xb[0],str):
-            path_sims = xb
+            path_sims = [xb]
         else:
             print('Unvalid path')
-    elif isinstance(xb,XBeachModelSetup):
-        path_sims = xb.model_path
+    else:
+        path_sims = [xb.model_path]
+    
+    ##
+    Nmax = int(np.ceil(len(path_sims)/N))
+    
+
+    
+    string = ''
+    count =0
+    run_number = 0
+    for ii, path_sim in enumerate(path_sims):
+        string = string + 'cd {} \ncall {}\n'.format(path_sim,xbeach_exe)
+        if count==Nmax:
+            with open(os.path.join(maindir,'run{}.bat'.format(run_number)), 'w') as f:
+                f.write(string)
+            count = 0
+            run_number = run_number + 1
+            string = ''
+        count = count +1
+    if count<=Nmax:
+        print(os.path.join(maindir,'run{}.bat'.format(run_number)))
+        with open(os.path.join(maindir,'run{}.bat'.format(run_number)), 'w') as f:
+            f.write(string)
     
     
 
@@ -267,7 +310,8 @@ def xgrid(x,z,
           zdry=None,
           dxdry = None,
           depthfac = 2,
-          maxfac = 1.15):
+          maxfac = 1.15,
+          nonh = False):
     '''
     Computes optimal xgrid 
 
@@ -343,8 +387,12 @@ def xgrid(x,z,
             k       = dispersion(2*np.pi/Tm,h[-1])
             ## MATLAB
             # k       = dispersion(2*np.pi/Tm,h[0])
-            Lshort  = 2*np.pi/k
-            Lwave   = 4 * Lshort
+            if nonh:
+                Lshort  = 2*np.pi/k
+                Lwave   = Lshort
+            else:
+                Lshort  = 2*np.pi/k
+                Lwave   = 4 * Lshort               
         else:
             Lwave = 0
         
@@ -400,8 +448,12 @@ def xgrid(x,z,
             
             if hgr[i]>eps:
                 k       = dispersion(2*np.pi/Tm,hgr[i])
-                Lshort  = 2*np.pi/k
-                Lwave   = 4 * Lshort
+                if nonh:
+                    Lshort  = 2*np.pi/k
+                    Lwave   = Lshort
+                else:
+                    Lshort  = 2*np.pi/k
+                    Lwave   = 4 * Lshort  
             else:
                 Lwave = 0
         ##
@@ -769,6 +821,9 @@ class XBeachModelSetup():
         else:
             self.wavemodel = input_par_dict['Wavemodel']
         
+        
+        if 'wbctype' in input_par_dict:
+            self.wbctype = input_par_dict['wbctype']        
 
         ## load parameters and categories
         f           = open(os.path.join(os.path.dirname(__file__), 'par.json'),'r')
@@ -790,12 +845,19 @@ class XBeachModelSetup():
     
     def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0, thetamin=-90, thetamax = 90, dtheta=10):
         
+        ##
+        assert(xgr.shape==zgr.shape,'Shape of xgr is not equal to shape of zgr')
+        
         ## 1D model
         if ygr is None or ygr.shape[0]==1:
             self.ygr = None
-            ## reduce size 
-            self.xgr = xgr #np.reshape(xgr,len(np.squeeze(xgr) ))
-            self.zgr = zgr #np.reshape(zgr,len(np.squeeze(zgr)))
+            ## make 2d matrix
+            if xgr.ndim==1:
+                self.xgr = xgr[np.newaxis, ...] 
+                self.zgr = zgr[np.newaxis, ...]  
+            else:
+                self.xgr = xgr
+                self.zgr = zgr            
         ## 2D model
         else:
             self.ygr = ygr
@@ -803,8 +865,8 @@ class XBeachModelSetup():
             self.zgr = zgr
         
         ##
-        self.nx = xgr.shape[1] - 1
-        self.ny = xgr.shape[0] - 1
+        self.nx = self.xgr.shape[1] - 1
+        self.ny = self.xgr.shape[0] - 1
         ##
         
         ## 1D
@@ -856,7 +918,6 @@ class XBeachModelSetup():
         path_params = os.path.join(path,'params.txt')
         
         assert os.path.exists(path), '{} does not exist'.format(path)
-        
         
         
         current_date    = datetime.today().strftime('%Y-%m-%d %HH:%mm')
@@ -917,7 +978,8 @@ class XBeachModelSetup():
             f.write('xori\t= {}\n'.format(self.xori).expandtabs(tabnumber))
             f.write('yori\t= {}\n'.format(self.yori).expandtabs(tabnumber))     
             f.write('xfile\t= x.grd\n'.expandtabs(tabnumber))
-            f.write('yfile\t= y.grd\n'.expandtabs(tabnumber))
+            if not self.fast1D:
+                f.write('yfile\t= y.grd\n'.expandtabs(tabnumber))
             f.write('depfile\t= bed.dep\n'.expandtabs(tabnumber))
             f.write('thetamin\t= {}\n'.format(self.thetamin).expandtabs(tabnumber))
             f.write('thetamax\t= {}\n'.format(self.thetamax).expandtabs(tabnumber))
@@ -999,9 +1061,15 @@ class XBeachModelSetup():
     def _plotdomain(self,save_path=None):
         plt.figure()
         if self.fast1D==True:
-            plt.plot(self.xgr,self.zgr)
+            plt.subplot(2,1,1)
+            plt.plot(np.squeeze(self.xgr),np.squeeze(self.zgr))
             plt.xlabel('x')
             plt.ylabel('z')
+            plt.subplot(2,1,2)
+            plt.plot(np.squeeze(self.xgr)[1:],np.diff(np.squeeze(self.xgr)))
+            plt.xlabel('x')
+            plt.ylabel('dx')
+            plt.subplot(2,1,1)
         else:
             plt.pcolor(self.xgr,self.ygr,self.zgr)
             plt.xlabel('x')
