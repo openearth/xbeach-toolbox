@@ -393,20 +393,20 @@ class XBeachModelAnalysis():
         if tideloc == 2:
             if 'paulrevere' in self.params:
                 if self.params['paulrevere'] == 1:  # two sea conditions, no land conditions
-                    plt.plot(t, zs[:, -1, 0], label='xb (ny, 1)')
+                    plt.plot(t[:lent-1], zs[:lent-1, -1, 0], label='xb (ny, 1)')
                     plt.plot(t_tide, zs0_tide[:, 1], linestyle=':', label='bc (ny, 1)')
                 else:  # one offshore condition, one land condition
-                    plt.plot(t, zs[:, 0, -1], label='xb (1,nx)')
+                    plt.plot(t[:lent-1], zs[:lent-1, 0, -1], label='xb (1,nx)')
                     plt.plot(t_tide, zs0_tide[:, 1], linestyle=':', label='bc (1, nx)')
             else:  # one offshore condition, one land condition
                 plt.plot(t, zs[:, 0, -1], label='xb (1,nx)')
                 plt.plot(t_tide, zs0_tide[:, 1], linestyle=':', label='bc (1, nx)')
         elif tideloc == 4:
-            plt.plot(t, zs[:, -1, 0], label='xb (ny, 1)')
+            plt.plot(t[:lent-1], zs[:lent-1, -1, 0], label='xb (ny, 1)')
             plt.plot(t_tide, zs0_tide[:, 1], linestyle=':', label='bc (ny, 1)')
-            plt.plot(t, zs[:, -1, -1], label='xb (ny, nx)')
+            plt.plot(t[:lent-1], zs[:lent-1, -1, -1], label='xb (ny, nx)')
             plt.plot(t_tide, zs0_tide[:, 2], linestyle=':', label='bc (ny, nx)')
-            plt.plot(t, zs[:, 0, -1], label='xb (1, nx)')
+            plt.plot(t[:lent-1], zs[:lent-1, 0, -1], label='xb (1, nx)')
             plt.plot(t_tide, zs0_tide[:, 3], linestyle=':', label='bc (1, nx)')
 
         plt.legend()
