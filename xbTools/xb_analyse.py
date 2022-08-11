@@ -145,26 +145,26 @@ class XBeachModelAnalysis():
         if self.params is None:
             self.get_params()
 
-            # waves boundary
-            if self.params['wbctype'] == 'jonstable':
-                dat = np.loadtxt(os.path.join(self.model_path, self.params['bcfile']))
+        # waves boundary
+        if self.params['wbctype'] == 'jonstable':
+            dat = np.loadtxt(os.path.join(self.model_path, self.params['bcfile']))
 
-                assert dat.shape[1] == 7, \
-                    'columns of jonstable should exactly be: Hm0, Tp, mainang, gammajsp, s, duration, dtbc'
+            assert dat.shape[1] == 7, \
+                'columns of jonstable should exactly be: Hm0, Tp, mainang, gammajsp, s, duration, dtbc'
 
-                self.waves_boundary['Hm0'] = dat[:, 0]
-                self.waves_boundary['Tp'] = dat[:, 1]
-                self.waves_boundary['mainang'] = dat[:, 2]
-                self.waves_boundary['gammajsp'] = dat[:, 3]
-                self.waves_boundary['s'] = dat[:, 4]
-                self.waves_boundary['tíme'] = np.cumsum(dat[:, 5])
+            self.waves_boundary['Hm0'] = dat[:, 0]
+            self.waves_boundary['Tp'] = dat[:, 1]
+            self.waves_boundary['mainang'] = dat[:, 2]
+            self.waves_boundary['gammajsp'] = dat[:, 3]
+            self.waves_boundary['s'] = dat[:, 4]
+            self.waves_boundary['time'] = np.cumsum(dat[:, 5])
 
-            elif self.params['wbctype'] == 'jons':
-                print('not yet written')
-                pass
-            else:
-                print('not yet written')
-                pass
+        elif self.params['wbctype'] == 'jons':
+            print('not yet written')
+            pass
+        else:
+            print('not yet written')
+            pass
 
     def get_vegetation(self):
         pass
@@ -292,7 +292,7 @@ class XBeachModelAnalysis():
 
         if '_mean' in var:
             assert sum([var[5:] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
-        elif '_point' in var:
+        elif 'point_' in var:
             assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'
         else:
             assert sum([var in x for x in self.params['globalvar']]) > 0, '{} not in xb output'
@@ -307,15 +307,15 @@ class XBeachModelAnalysis():
         dat = ds.variables[var][:]
 
         #mean and point output might not be availble if the eor is not reached. Therefore cut
-        if 'point' in var and len(np.atleast_1d(dat.mask)) > 1:
+        if 'point_' in var and len(np.atleast_1d(dat.mask)) > 1:
             dat = dat[~dat.mask[:, 0], :]
-        elif len(dat.shape) == 3 and 'mean' in var and len(np.atleast_1d(dat.mask)) > 1:
+        elif len(dat.shape) == 3 and '_mean' in var and len(np.atleast_1d(dat.mask)) > 1:
             dat = dat[~dat.mask[:, 0, 0], :, :]
-        elif len(dat.shape) == 2 and 'mean' in var and len(np.atleast_1d(dat.mask)) > 1:
+        elif len(dat.shape) == 2 and '_mean' in var and len(np.atleast_1d(dat.mask)) > 1:
             # 1D case
             pass
 
-        if not ('point' in var):
+        if not ('point_' in var):
             if len(self.AOI) > 0:
                 print('slicing map output to AOI')
                 if len(dat.shape) == 2:
