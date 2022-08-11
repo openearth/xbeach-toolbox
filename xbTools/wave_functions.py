@@ -68,4 +68,16 @@ def wavecelerity(Tp, d, g=9.81):
     cg = n * c
     return cg, n
 
+def directional_spread_kuik(theta,ee):
+    # determine mean wave direction and directional spreading, Kuik et al. 1988
+    # see SWAN user manual for definitions
+    # theta0 and dspr only for range [fmin,fmax]
+    dtheta = theta[1] - theta[0]
+    st = np.sin(theta)
+    ct = np.cos(theta)
+    m0Sin = np.dot(ee, st) * dtheta
+    m0Cos = np.dot(ee, ct) * dtheta
+    m0 = np.sum(ee)*len(theta)*dtheta
+    dspr2 = 2 * (1 - np.sqrt((m0Sin / m0) ** 2 + (m0Cos / m0) ** 2))
+    return np.rad2deg(np.sqrt(dspr2))  # directional spreading in degrees
 
