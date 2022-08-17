@@ -26,6 +26,7 @@ class XBeachModelAnalysis():
         self.waves_boundary = {}
         self.dat = {}
         self.tide = {}
+        self.wind = {}
         self.var = {}
         self.save_fig = False
         self.plot_localcoords = False
@@ -80,8 +81,13 @@ class XBeachModelAnalysis():
                     params[x1.strip()] = x2.strip()
 
         # global variables
-        i0 = [i for i, var in enumerate(dat) if 'nglobalvar' in var][0]
-        params['globalvar'] = dat[i0+1:i0+int(params['nglobalvar']+1)]
+        ixlist = [i for i, var in enumerate(dat) if 'nglobalvar' in var]
+        if len(ixlist) > 0:
+            i0 = ixlist[0]
+            params['globalvar'] = dat[i0+1:i0+int(params['nglobalvar']+1)]
+        else:
+            params['nglobalvar'] = 0
+            params['globalvar'] = []
 
         # mean variables
         ixlist = [i for i, var in enumerate(dat) if 'nmeanvar' in var]
@@ -162,6 +168,11 @@ class XBeachModelAnalysis():
         elif self.params['wbctype'] == 'jons':
             print('not yet written')
             pass
+        elif self.params['wbctype'] == 'params':
+            self.waves_boundary['Hm0'] = np.sqrt(2)*float(self.params['Hrms'])
+            self.waves_boundary['Tp'] = float(self.params['Trep'])
+            self.waves_boundary['mainang'] = float( self.params['dir0'])
+            self.waves_boundary['s'] = float(self.params['m']/2)
         else:
             print('not yet written')
             pass
@@ -188,6 +199,23 @@ class XBeachModelAnalysis():
         if 'paulrevere' in self.params:
             self.tide['paulrevere'] = self.params['paulrevere']
 
+    def get_wind(self):
+        if self.params is None:
+            self.get_params()
+
+        if self.params['wind'] != 1:
+            print('no wind forcing was imposed')
+            return
+        
+            
+            
+        dat = np.loadtxt(os.path.join(self.model_path, self.params['windfile']))
+
+        self.wind['time'] = dat[:, 0]
+        self.wind['u10'] = dat[:, 1]
+        self.wind['u10dir'] = dat[:, 2]
+
+            
     def load_model_setup(self):
         self.get_params()
         self.load_grid()
@@ -291,7 +319,11 @@ class XBeachModelAnalysis():
             return
 
         if '_mean' in var:
-            assert sum([var[5:] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
+            assert sum([var[:-5] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
+        elif '_min' in var:
+            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
+        elif '_max' in var:
+            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
         elif 'point_' in var:
             assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'
         else:
@@ -322,9 +354,10 @@ class XBeachModelAnalysis():
                     self.var[var] = dat[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
                 elif len(dat.shape) == 3:
                     self.var[var] = dat[:, self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+                elif len(dat.shape) == 4:
+                    self.var[var] = dat[:, :, self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
                 else:
-                    print('4D variable reading not yet implemented')
-                    # todo: >3D variable reading implementing
+                    print('>4D variable reading not yet implemented')
                     pass
             else:
                 self.var[var] = dat
@@ -367,22 +400,27 @@ class XBeachModelAnalysis():
 
         assert len(self.AOI) == 0, 'can only check the tide if zs0 is loaded on the entire model domain, so without AOI'
 
+
+        # get model output
+        self.load_modeloutput('zs')
+        zs = self.var['zs']
+
+
+
         # get model input
         if self.tide == {}:
             self.get_tide()
 
         zs0_tide = self.tide['zs0']
         if self.globalstarttime is None:
-            t_tide = self.tide['time']
+            t_tide = self.tide['time'] / 3600
+            t = self.var['globaltime'] / 3600
         else:
             t_tide = np.array(
                 [np.timedelta64(int(x), 's') for x in self.tide['time']]) \
-                                     + self.globalstarttime
+                     + self.globalstarttime
+            t = self.var['globaltime']
 
-        # get model output
-        self.load_modeloutput('zs')
-        zs = self.var['zs']
-        t = self.var['globaltime']
         lent = min([len(zs), len(t)])
         tideloc = self.params['tideloc']
 
@@ -438,9 +476,16 @@ class XBeachModelAnalysis():
         im = ax.pcolor(x, y, dat, **kwargs)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
-        fmt = lambda x, pos: '{:.1f}'.format(x)
-        if 'vmin' in kwargs:
+
+        if np.max(np.abs(dat))<0.001:
+            fmt = lambda x, pos: '{:.1e}'.format(x)
+        else:
+            fmt = lambda x, pos: '{:.1f}'.format(x)
+
+        if 'vmin' in kwargs and 'vmax' in kwargs:
             fig.colorbar(im, cax=cax, orientation='vertical', label=label, extend='both', format=FuncFormatter(fmt))
+        elif 'vmax'in kwargs:
+            fig.colorbar(im, cax=cax, orientation='vertical', label=label, extend='max', format=FuncFormatter(fmt))
         else:
             fig.colorbar(im, cax=cax, orientation='vertical', label=label, format=FuncFormatter(fmt))
 
@@ -559,7 +604,7 @@ class XBeachModelAnalysis():
         return fig, ax
 
     def fig_map_quiver(self, var=['ue', 've'], label='ue [m/s]', it=np.inf, streamspacing=50,
-                       figsize=None, vmax=None, vmin=None, **kwargs):
+                       figsize=None, vmax=None, vmin=None, ifrac = 0, **kwargs):
         '''
         plots map plots of map output, only works for rectilinear grids (that can be of varying grid resolution).
         Does not work for curvilinear grids!
@@ -578,14 +623,20 @@ class XBeachModelAnalysis():
             it = len(self.var['globaltime']) - 1
         assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
 
-        data = np.sqrt((self.var[var[0]][it, :, :]) ** 2 + (self.var[var[1]][it, :, :]) ** 2)
 
         x = np.flipud(self.var['localx'].data)
         y = np.flipud(self.var['localy'].data)
-        u = np.flipud(self.var[var[0]][it, :, :].data)
-        v = np.flipud(self.var[var[1]][it, :, :].data)
-        u[u < -100] = 0
-        v[v < -100] = 0
+        if len(self.var[var[0]].shape)==3:
+            u = np.flipud(self.var[var[0]][it, :, :].data)
+            v = np.flipud(self.var[var[1]][it, :, :].data)
+            u[u < -100] = 0
+            v[v < -100] = 0
+            data = np.sqrt((self.var[var[0]][it, :, :]) ** 2 + (self.var[var[1]][it, :, :]) ** 2).squeeze()
+
+        elif len(self.var[var[0]].shape)==4:
+            u = np.flipud(self.var[var[0]][it, ifrac, :, :].data)
+            v = np.flipud(self.var[var[1]][it, ifrac, :, :].data)
+            data = np.sqrt((self.var[var[0]][it, ifrac, :, :]) ** 2 + (self.var[var[1]][it, ifrac, :, :]) ** 2).squeeze()
 
         u, v = xb.rotate_grid(u, v, self.var['gridang'])
 
