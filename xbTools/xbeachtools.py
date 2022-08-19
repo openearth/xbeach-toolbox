@@ -10,26 +10,25 @@ from xbTools.wave_functions import dispersion, wavecelerity
 
 def xb_run_script_win(xb, N, maindir, xbeach_exe):
     '''
-    
+    Create batch script to run simulations.
 
     Parameters
     ----------
-    xb : list of class
-        list with simulation paths.
-    N : TYPE
-        number of run scripts.
+    xb : LIST or CLASS
+        list with simulation paths or XBeachModelSetup class
+    N : int
+        Number of batch scripts.
     maindir : TYPE
-        path where run script are created.
+        path where run script is created.
     xbeach_exe : TYPE
-        path of exe.
+        path of XBeach executable.
 
     Returns
     -------
     None.
 
     '''
-
-    
+    ## check xb, and create path_sims list
     if isinstance(xb,list):
         if isinstance(xb[0],XBeachModelSetup):
             path_sims = []
@@ -42,14 +41,13 @@ def xb_run_script_win(xb, N, maindir, xbeach_exe):
     else:
         path_sims = [xb.model_path]
     
-    ##
+    ## number of batch scripts
     Nmax = int(np.ceil(len(path_sims)/N))
     
-
-    
-    string = ''
-    count =0
-    run_number = 0
+    ## string
+    string      = ''
+    count       = 0
+    run_number  = 0
     for ii, path_sim in enumerate(path_sims):
         string = string + 'cd {} \ncall {}\n'.format(path_sim,xbeach_exe)
         if count==Nmax:
@@ -175,29 +173,34 @@ def offshore_depth(Hm0, Tp, depth_offshore_profile, depth_boundary_conditions):
 
 def lateral_extend(x,y,z,n=5):
     '''
-    
+    Extend the model domain at both lateral sides with n number of cells
 
     Parameters
     ----------
-    x : TYPE
-        DESCRIPTION.
+    x : array
+        x-grid.
     y : TYPE
-        DESCRIPTION.
-    z : TYPE
-        DESCRIPTION.
-    n : TYPE, optional
-        DESCRIPTION. The default is 5.
+        y-grid.
+    z : array
+        bathymetry.
+    n : int, optional
+        extension at both lateral sides. The default is 5.
 
     Returns
     -------
-    xnew : TYPE
-        DESCRIPTION.
-    ynew : TYPE
-        DESCRIPTION.
-    znew : TYPE
-        DESCRIPTION.
+    xnew : array
+        x-grid.
+    ynew : array
+        y-grid.
+    znew : array
+        bathymetry
 
     '''
+    assert(x.ndim<2,'x must be a matrix')
+    assert(y.ndim<2,'y must be a matrix')
+    assert(z.ndim<2,'z must be a matrix')
+    assert(z.shape==x.shape==y.shape,'shape of input matrix is not the same')
+    
     dy1 = y[1,0]-y[0,0]
     dy2 = y[-1,0]-y[-2,0]
     
@@ -211,13 +214,13 @@ def lateral_extend(x,y,z,n=5):
     
     for i in range(n):
         ## update x
-        xnew[i,:]   = x[0,:]
+        xnew[i,:]       = x[0,:]
         xnew[-(i+1),:]  = x[-1,:]
         ## update z
-        znew[i,:]   = z[0,:]
+        znew[i,:]       = z[0,:]
         znew[-(i+1),:]  = z[-1,:]       
         ## update y
-        ynew[i,:]   = y[0,:]-dy1*n+dy1*i
+        ynew[i,:]       = y[0,:]-dy1*n+dy1*i
         ynew[-(i+1),:]  = y[-1,:]+dy2*n-dy2*i
     return xnew, ynew, znew
 
@@ -313,36 +316,36 @@ def xgrid(x,z,
           maxfac = 1.15,
           nonh = False):
     '''
-    Computes optimal xgrid 
+    Compute spatially varying grid based on the local wave length 
 
     Parameters
     ----------
     x : array
         x points of the bathymetry.
     z : array
-        bathymetry.
+        bathymetry (positive upwards).
     ppwl : integer, optional
         Number of points per wave length. The default is 20.
-    dxmin : TYPE, optional
-        DESCRIPTION. The default is 5.
-    dxmax : TYPE, optional
-        DESCRIPTION. The default is np.inf.
-    vardx : TYPE, optional
-        DESCRIPTION. The default is 1.
-    wl : TYPE, optional
-        DESCRIPTION. The default is 0.
-    eps : TYPE, optional
-        DESCRIPTION. The default is 0.01.
-    Tm : TYPE, optional
-        DESCRIPTION. The default is 8.
-    xdry : TYPE, optional
-        DESCRIPTION. The default is None.
-    zdry : TYPE, optional
-        DESCRIPTION. The default is None.
-    dxdry : TYPE, optional
-        DESCRIPTION. The default is None.
-    depthfac : TYPE, optional
-        DESCRIPTION. The default is 2.
+    dxmin : float, optional
+        minimum grid resolution. The default is 5.
+    dxmax : float, optional
+        maximum grid reslution. The default is np.inf.
+    vardx : int, optional
+        1=spatially varying grid; 0=equidistant  grid resolution. The default is 1.
+    wl : float, optional
+        Water level. The default is 0.
+    eps : float, optional
+        Minimum water depth. The default is 0.01.
+    Tm : float, optional
+        Mean wave period. The default is 8.
+    xdry : float, optional
+        bathymetry is considered dry for x-grids larger than xdry. The default is None.
+    zdry : float, optional
+        bathymetry is considered dry for z values larger than zdry. The default is None.
+    dxdry : float, optional
+        Resolution of dry cells. The default is None.
+    depthfac : float, optional
+         . The default is 2.
     maxfac : TYPE, optional
         DESCRIPTION. The default is 1.15.
 
@@ -814,26 +817,29 @@ class XBeachModelSetup():
     
     def set_params(self,input_par_dict):
         
-        ## set wavemodel. Default Surfbeat
+        ## set wavemodel. Default is Surfbeat
         if 'Wavemodel' not in input_par_dict:
-            print('No wavemodel defined. Set to Surfbeat')
+            print('No wavemodel defined. Wavemodel is set to Surfbeat')
             self.wavemodel = 'surfbeat'
         else:
             self.wavemodel = input_par_dict['Wavemodel']
         
-        
+        ## set wbctype
         if 'wbctype' in input_par_dict:
-            self.wbctype = input_par_dict['wbctype']        
+            self.wbctype = input_par_dict['wbctype'] 
+
 
         ## load parameters and categories
         f           = open(os.path.join(os.path.dirname(__file__), 'par.json'),'r')
         par_dict    = json.loads(f.read())
         ## create input dict
         self.input_par = {}
-        ## loop over categories
-        for par_category in par_dict:
-            ## loop over input parameters 
-            for input_par in input_par_dict:
+        self.input_par['par'] = {}
+        ## loop over input parameters 
+        value_added = False
+        for input_par in input_par_dict:
+            ## loop over categories
+            for par_category in par_dict:
                 ## if input parameter is in category, add parameter
                 if input_par in par_dict[par_category]:
                     ## create category if not exist
@@ -841,6 +847,10 @@ class XBeachModelSetup():
                         self.input_par[par_category] = {}
                     ## add parameter and value                    
                     self.input_par[par_category][input_par] = input_par_dict[input_par]
+                    value_added = True
+            if not value_added:
+                self.input_par['par'][input_par] = input_par_dict[input_par]
+            
         
     
     def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0, thetamin=-90, thetamax = 90, dtheta=10):
@@ -890,7 +900,7 @@ class XBeachModelSetup():
         ##
         if wbctype=='jonstable':
             required_par = ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc']
-        elif wbctype=='params':
+        elif wbctype=='jons':
             required_par = ['Hm0','Tp','mainang','gammajsp','s','fnyq']
         else:
             assert False, 'Wrong wbctype'
@@ -1039,6 +1049,19 @@ class XBeachModelSetup():
                 self._plot_boundary(path)
 
     def _plot_boundary(self,save_path=None):
+        '''
+        Plot boundary conditions
+
+        Parameters
+        ----------
+        save_path : TYPE, optional
+            Path were figure is saved. The default is None.
+
+        Returns
+        -------
+        None.
+
+        '''
         if self.wbctype=='jonstable':
             plt.figure()
             plt.subplot(3,1,1)
@@ -1059,10 +1082,23 @@ class XBeachModelSetup():
             print('Not possible to plot wave boundary')
             
     def _plotdomain(self,save_path=None):
-        plt.figure()
+        '''
+        Plot the domain. 
+
+        Parameters
+        ----------
+        save_path : string, optional
+            Path were figure is saved. The default is None.
+
+        Returns
+        -------
+        None.
+
+        '''
+        plt.figure(figsize=[10,10])
         if self.fast1D==True:
             plt.subplot(2,1,1)
-            plt.plot(np.squeeze(self.xgr),np.squeeze(self.zgr))
+            plt.plot(np.squeeze(self.xgr),np.squeeze(self.zgr)*self.posdwn)
             plt.xlabel('x')
             plt.ylabel('z')
             plt.subplot(2,1,2)
@@ -1071,7 +1107,7 @@ class XBeachModelSetup():
             plt.ylabel('dx')
             plt.subplot(2,1,1)
         else:
-            plt.pcolor(self.xgr,self.ygr,self.zgr)
+            plt.pcolor(self.xgr,self.ygr,self.zgr*self.posdwn)
             plt.xlabel('x')
             plt.ylabel('y')
             plt.colorbar()
