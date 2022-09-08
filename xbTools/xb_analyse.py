@@ -51,10 +51,13 @@ class XBeachModelAnalysis():
     def set_plot_localcoords(self, yesno):
         assert type(yesno) is bool, 'input type must be bool'
         self.plot_localcoords = yesno
+        self.plot_km_coords = False
+        self.load_output_coordinates()
 
     def set_plot_km_coords(self, yesno):
         assert type(yesno) is bool, 'input type must be bool'
         self.plot_km_coords = yesno
+        self.load_output_coordinates()
 
     def set_aoi(self, AOI):
         self.var = {}  # drop variables from memory because they need to be reloaded with appropriate AOI
@@ -527,10 +530,11 @@ class XBeachModelAnalysis():
                 ax.set_ylabel('y [m]')
 
         ax.set_aspect('equal')
+        fig.tight_layout()
 
         return fig, ax
 
-    def fig_map_var(self, var, label, it=np.inf, **kwargs):
+    def fig_map_var(self, var, label, it=np.inf, figsize=None, **kwargs):
 
         self.load_modeloutput(var)
 
@@ -539,7 +543,7 @@ class XBeachModelAnalysis():
         assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
 
         data = self.var[var][it, :, :]
-        fig, ax = self._fig_map_var(data, label, **kwargs)
+        fig, ax = self._fig_map_var(data, label, figsize, **kwargs)
 
         if self.globalstarttime is None:
             ax.set_title('t = {:.1f}Hr'.format(self.var['globaltime'][it] ))
