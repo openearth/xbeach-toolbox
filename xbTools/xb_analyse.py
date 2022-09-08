@@ -265,6 +265,9 @@ class XBeachModelAnalysis():
             station_list = [x.strip() for x in station_list]
             self.var['station_id'] = station_list
 
+            self.var['station_x'] = ds.variables['pointx'][:]
+            self.var['station_y'] = ds.variables['pointy'][:]
+
         x = ds.variables['globalx'][:]
         y = ds.variables['globaly'][:]
         if len(self.AOI) > 0:
