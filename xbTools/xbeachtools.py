@@ -266,7 +266,7 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
     ## maximum distance
     distance    = (z0max - depth) * 1/slope
     ## dummy array
-    x_dummy     = np.arange(x[0,0]-distance,x[0,0],dx_grid)
+    x_dummy     = np.arange(x[0, 0]-distance, x[0, 0], dx_grid)
     
     x_extend    = np.ones((x.shape[0], len(x_dummy) ))
     x_extend    = x_extend * x_dummy
@@ -359,8 +359,10 @@ def xgrid(x,z,
     '''
 
     ## set default values
-    dxdry   = dxmin
-    zdry    = wl
+    if dxdry is None:
+        dxdry   = dxmin
+    if zdry is None:
+        zdry    = wl
 
     
     ## remove nan
@@ -380,16 +382,16 @@ def xgrid(x,z,
         
         ## constant dx
         xgr  = np.linspace(xstart,xend,nx+1)
-        zgr  = np.interp(xgr,x,z)
+        zgr  = np.interp(xgr, x, z)
     ## spatially varying grid
     else:
         ## water depth
         h = np.maximum(wl-z,eps)
         
-        if h[-1]>eps:
-            k       = dispersion(2*np.pi/Tm,h[-1])
+        if h[0]>eps:
+            # k       = dispersion(2*np.pi/Tm,h[-1])
             ## MATLAB
-            # k       = dispersion(2*np.pi/Tm,h[0])
+            k       = dispersion(2*np.pi/Tm,h[0])
             if nonh:
                 Lshort  = 2*np.pi/k
                 Lwave   = Lshort
