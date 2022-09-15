@@ -297,6 +297,7 @@ class XBeachModelAnalysis():
             self.var['globaly'] = y
 
         self.var['gridang'] = np.arctan2(y[0, 0]-y[-1, 0], x[0, 0]-x[-1, 0])
+        # self.var['gridang'] = np.arctan2(y[0, -1] - y[0, 0], x[0, -1] - x[0, 0])
 
         def path_distance(polx, poly):
             '''
@@ -717,6 +718,7 @@ class XBeachModelAnalysis():
             v = np.flipud(self.var[var[1]][it, ifrac, :, :].data)
             data = np.sqrt((self.var[var[0]][it, ifrac, :, :]) ** 2 + (self.var[var[1]][it, ifrac, :, :]) ** 2).squeeze()
 
+        # u, v = xb.rotate_grid(u, v, self.var['gridang'])
         u, v = xb.rotate_grid(u, v, self.var['gridang'])
 
         fu = interp2d(x[:, 0], y[0, :], u.T)
