@@ -264,7 +264,9 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
     dx_grid = x[0,1]-x[0,0]
     
     ## maximum distance
-    distance    = (z0max - depth) * 1/slope
+    distance    = (z0max - depth)/slope
+    ## prevent very small grid sizes!
+    distance    = np.ceil(distance/dx_grid) * dx_grid
     ## dummy array
     x_dummy     = np.arange(x[0,0]-distance,x[0,0],dx_grid)
     
@@ -651,9 +653,24 @@ def rotate(x, y, theta):
     output: rotated arrays x,y
 
     author: Marlies van der Lugt
-    revision: v0
+    revision: v0    
+
+    Parameters
+    ----------
+    x : float
+        x-coordinate.
+    y : float
+        y-coordinate.
+    theta : floatd
+        angle in radians.
+
+    Returns
+    -------
+    TYPE
+        rotated coordinates.
 
     '''
+    
     rotMatrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
     coords = np.vstack((x.flatten(), y.flatten()))
     return rotMatrix @ coords
@@ -666,7 +683,25 @@ def rotate_grid(xgr, ygr, theta):
 
     author: Marlies van der Lugt
     revision: v0
+
+    Parameters
+    ----------
+    xgr : array
+        x grid.
+    ygr : array
+        y grid.
+    theta : floatd
+        ange in radians.
+
+    Returns
+    -------
+    uv : array
+        rotated grid.
+    vd : array
+        rotated grid.
+
     '''
+    
     ny, nx = xgr.shape
     coords = np.vstack((xgr.reshape(-1), ygr.reshape(-1)))
     rotMatrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
@@ -683,7 +718,23 @@ def grid_world2local(xgr, ygr):
     output: rotated grid x,y and grid angle alpha
 
     author: Marlies van der Lugt
-    revision: v0
+    revision: v0    
+
+    Parameters
+    ----------
+    xgr : array
+        x-grid.
+    ygr : array
+        y-grid.
+
+    Returns
+    -------
+    xl : array
+        x-grid in local coordinates
+    yl : array
+        y-grid in local coordinates
+    alpha : TYPE
+        rotation.
 
     '''
     
@@ -853,7 +904,7 @@ class XBeachModelSetup():
             
         
     
-    def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0, thetamin=-90, thetamax = 90, dtheta=10):
+    def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0,alfa=0, thetamin=-90, thetamax = 90, dtheta=10, dtheta_s=10):
         
         ##
         assert(xgr.shape==zgr.shape,'Shape of xgr is not equal to shape of zgr')
@@ -894,13 +945,15 @@ class XBeachModelSetup():
         self.thetamax   = thetamax
         self.dtheta     = dtheta
         self.vardx  = 1
+        self.alfa = alfa
+        self.dtheta_s = dtheta_s
     
     def set_waves(self,wbctype, input_struct):
         self.wbctype = wbctype
         ##
         if wbctype=='jonstable':
             required_par = ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc']
-        elif wbctype=='jons':
+        elif wbctype=='parametric':
             required_par = ['Hm0','Tp','mainang','gammajsp','s','fnyq']
         else:
             assert False, 'Wrong wbctype'
@@ -937,7 +990,7 @@ class XBeachModelSetup():
         
         
         ## waves boundary
-        if self.wbctype=='jons':
+        if self.wbctype=='parametric':
             if 'Wave boundary condition parameters' in self.input_par:
                 self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonswap.txt'
             else:
@@ -986,7 +1039,8 @@ class XBeachModelSetup():
             f.write('nx\t= {}\n'.format(self.nx).expandtabs(tabnumber))
             f.write('ny\t= {}\n'.format(self.ny).expandtabs(tabnumber))
             f.write('xori\t= {}\n'.format(self.xori).expandtabs(tabnumber))
-            f.write('yori\t= {}\n'.format(self.yori).expandtabs(tabnumber))     
+            f.write('yori\t= {}\n'.format(self.yori).expandtabs(tabnumber))
+            f.write('alfa\t= {}\n'.format(self.alfa).expandtabs(tabnumber)) 
             f.write('xfile\t= x.grd\n'.expandtabs(tabnumber))
             if not self.fast1D:
                 f.write('yfile\t= y.grd\n'.expandtabs(tabnumber))
@@ -994,6 +1048,7 @@ class XBeachModelSetup():
             f.write('thetamin\t= {}\n'.format(self.thetamin).expandtabs(tabnumber))
             f.write('thetamax\t= {}\n'.format(self.thetamax).expandtabs(tabnumber))
             f.write('dtheta\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
+            f.write('dtheta_s\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
             f.write('\n')
             
             ## write input vars
@@ -1107,11 +1162,21 @@ class XBeachModelSetup():
             plt.ylabel('dx')
             plt.subplot(2,1,1)
         else:
+            plt.subplot(2,1,1)
             plt.pcolor(self.xgr,self.ygr,self.zgr*self.posdwn)
             plt.xlabel('x')
             plt.ylabel('y')
             plt.colorbar()
-        plt.grid('on')
-        plt.title(self.fname)
+            plt.axis('equal')
+            plt.title('Local coordinates')
+            plt.subplot(2,1,2)
+            [X_world,Y_world] = rotate_grid(self.xgr,self.ygr,np.deg2rad(self.alfa))
+            plt.pcolor(X_world,Y_world,self.zgr*self.posdwn)
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.axis('equal')
+            plt.colorbar()
+            plt.title('World coordinates')
+        plt.suptitle(self.fname)
         if save_path!=None:
             plt.savefig(os.path.join(save_path,'domain.png'))

@@ -10,8 +10,19 @@ import os
 ## import xbeach tools
 sys.path.append(os.path.abspath(os.path.join('..')))
 
-from xbTools import xgrid, ygrid, seaward_extend, XBeachModelSetup, offshore_depth
+from xbTools import xgrid, ygrid, seaward_extend, XBeachModelSetup, offshore_depth, xb_run_script_win
 plt.style.use(os.path.join('..','xbTools','xb.mplstyle'))
+
+###############################################################################
+###  input                                                                  ###
+###############################################################################
+
+zs0 = 5
+Hm0 = 9
+Tp  = 15
+
+
+
 ###############################################################################
 ###  load data                                                              ###
 ###############################################################################
@@ -42,13 +53,18 @@ plt.title('bathy')
 ###  x grid                                                                 ###
 ###############################################################################
 
-xgr,zgr = xgrid(x, bathy,dxmin=2)
+xgr,zgr = xgrid(x, bathy,dxmin=2,Tm=Tp,wl=zs0)
 
 
 plt.figure()
+plt.subplot(2,1,1)
 plt.plot(x,bathy,'-o')
 plt.plot(xgr,zgr,'.-')
 plt.legend(['Bathy','xgr'])
+plt.xlabel('x [m]')
+plt.ylabel('z [m]')
+plt.subplot(2,1,2)
+plt.plot(xgr[0:-1],np.diff(xgr))
 plt.xlabel('x [m]')
 plt.ylabel('z [m]')
 
@@ -96,13 +112,14 @@ print(xb_setup)
 
 xb_setup.set_grid(xgr,None,zgr)
 
-xb_setup.set_waves('jons',{'Hm0':2,'Tp':5,'gammajsp':3.3, 's' : 10000, 'mainang':270,'fnyq':1})
+xb_setup.set_waves('parametric',{'Hm0':2,'Tp':5,'gammajsp':3.3, 's' : 10000, 'mainang':270,'fnyq':1})
 #xb_setup.set_waves('jonstable',{'Hm0':[1.5, 2, 1.5],'Tp':[4, 5, 4],'gammajsp':[3.3, 3.3, 3.3], 's' : [20,20,20], 'mainang':[270,280, 290],'duration':[3600, 3600, 3600],'dtbc':[1,1,1]})
 
 xb_setup.set_params({'Wavemodel':'surfbeat',
-                     'morphology':0,
+                     'morphology':1,
                      'befriccoef':0.01,
                      'tstop':3600,
+                     'zs0':zs0,
                      'nglobalvar':['zb','zs','H'],
                      'npointvar':['zs','zb'],
                      'nmeanvar':['zb'],
@@ -115,4 +132,5 @@ if not os.path.exists(sim_path):
     os.mkdir(sim_path)
 xb_setup.write_model(sim_path)
 
+xb_run_script_win(xb_setup, N=1, maindir='', xbeach_exe='d:\\XBeach\\XBeachXFINAL\\xbeach.exe')
 

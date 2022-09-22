@@ -2,7 +2,7 @@ import numpy as np
 
 
 
-def dispersion(w, d, max_error=0.00001):
+def dispersion(w, d, max_error=0.00001,g=9.81):
     '''
     Computes the wave number given a radial frequeny and water depth
 
@@ -14,6 +14,8 @@ def dispersion(w, d, max_error=0.00001):
         water depth.
     max_error : float, optional
         maximum error. The default is 0.00001.
+    g : float, optional
+        gravitational acceleration
 
     Returns
     -------
@@ -21,11 +23,12 @@ def dispersion(w, d, max_error=0.00001):
         wave number.
 
     '''
-    g   = 9.81
+
     ## initial guess
     k1  = 1000
     ## iterate untill convergence
-    for i in range(100000):
+    N = 100000
+    for i in range(N):
         ## update k
         k       = k1
         ## next iteration
@@ -35,14 +38,14 @@ def dispersion(w, d, max_error=0.00001):
         if error < max_error:
             break   
     ## no convergence
-    if i==99999:
+    if i==N-1:
         print ('Warning: no convergence')
     return k 
 
 
 def wavecelerity(Tp, d, g=9.81):
     '''
-    
+    Computes the group velocity and wave celerity ratio based on the period and water depth
 
     Parameters
     ----------
@@ -62,16 +65,32 @@ def wavecelerity(Tp, d, g=9.81):
 
     '''
     
-    k = dispersion(2*np.pi/Tp, d, g)
-    n = 0.5 * (1 + 2 * k * d * np.sinh(2 * k * d))
-    c = g * Tp/(2 * np.pi) * np.tanh(k * d)
-    cg = n * c
+    k       = dispersion(2*np.pi/Tp, d, g)
+    n       = 0.5 * (1 + 2 * k * d * np.sinh(2 * k * d))
+    c       = g * Tp/(2 * np.pi) * np.tanh(k * d)
+    cg      = n * c
     return cg, n
 
 def directional_spread_kuik(theta,ee):
-    # determine mean wave direction and directional spreading, Kuik et al. 1988
-    # see SWAN user manual for definitions
-    # theta0 and dspr only for range [fmin,fmax]
+    '''
+    determine mean wave direction and directional spreading, Kuik et al. 1988
+    see SWAN user manual for definitions
+    theta0 and dspr only for range [fmin,fmax]
+
+    Parameters
+    ----------
+    theta : array
+        DESCRIPTION.
+    ee : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        directional spreading in degrees.
+
+    '''
+
     dtheta = theta[1] - theta[0]
     st = np.sin(theta)
     ct = np.cos(theta)
