@@ -28,11 +28,15 @@ class XBeachModelAnalysis():
         self.tide = {}
         self.wind = {}
         self.var = {}
+        self.long_name = {}
+        self.units = {}
         self.save_fig = False
         self.plot_localcoords = False
         self.plot_km_coords = False
         self.AOI = []
         self.globalstarttime = None
+        self.unitdict = {'Hm0': ' [m]', 'H': ' [m]', 'zs': ' [m+NAP]', 'u': ' [m/s]', 'v': ' [m/s]',
+                         'zb': ' [m]', 'thetamean': ' [deg]', 'beta': '[-]'}
 
     def __repr__(self):
         return self.fname
@@ -47,10 +51,13 @@ class XBeachModelAnalysis():
     def set_plot_localcoords(self, yesno):
         assert type(yesno) is bool, 'input type must be bool'
         self.plot_localcoords = yesno
+        self.plot_km_coords = False
+        self.load_output_coordinates()
 
     def set_plot_km_coords(self, yesno):
         assert type(yesno) is bool, 'input type must be bool'
         self.plot_km_coords = yesno
+        self.load_output_coordinates()
 
     def set_aoi(self, AOI):
         self.var = {}  # drop variables from memory because they need to be reloaded with appropriate AOI
@@ -59,6 +66,10 @@ class XBeachModelAnalysis():
     def set_globalstarttime(self, tstart):
         assert type(tstart) is str, 'tstart must be given as a string of the format 2021-10-11T13:00:00'
         self.globalstarttime = np.datetime64(tstart)
+
+    def set_unitdict(self,unitdict):
+        assert type(unitdict) is dict, 'unitdict must be given in dictionary format'
+        self.unitdict = unitdict
 
     def get_params(self):
         '''
@@ -260,10 +271,15 @@ class XBeachModelAnalysis():
             for ib in range(nb) :
                 sn = ''
                 for istat in range(nstat):
-                    sn += dat.data[ib,istat].decode('UTF-8')
+                    sn += dat.data[ib, istat].decode('UTF-8')
                 station_list.append(sn)
             station_list = [x.strip() for x in station_list]
             self.var['station_id'] = station_list
+            # self.var['station_x'] =
+            # self.var['station_y'] =
+
+            self.var['station_x'] = ds.variables['pointx'][:]
+            self.var['station_y'] = ds.variables['pointy'][:]
 
         x = ds.variables['globalx'][:]
         y = ds.variables['globaly'][:]
@@ -281,6 +297,7 @@ class XBeachModelAnalysis():
             self.var['globaly'] = y
 
         self.var['gridang'] = np.arctan2(y[0, 0]-y[-1, 0], x[0, 0]-x[-1, 0])
+        # self.var['gridang'] = np.arctan2(y[0, -1] - y[0, 0], x[0, -1] - x[0, 0])
 
         def path_distance(polx, poly):
             '''
@@ -312,7 +329,11 @@ class XBeachModelAnalysis():
         self.var['localy'], self.var['localx'] = np.meshgrid(self.var['cross'], self.var['along'])
         self.var['localx'] = np.flipud(self.var['localx'])  # to plot
 
+        if self.plot_km_coords:
+            self.var['localx'] = self.var['localx']/1e3
+            self.var['localy'] = self.var['localy']/1e3
 
+        return
 
     def load_modeloutput(self, var):
         if var in self.var:
@@ -361,8 +382,13 @@ class XBeachModelAnalysis():
                     pass
             else:
                 self.var[var] = dat
+
         else:
             self.var[var] = dat
+
+        #read long name and units from netcdf
+        self.long_name[var] = ds.variables[var].long_name
+        self.units[var] = ds.variables[var].units
 
     def get_modeloutput(self, var):
         self.load_modeloutput(var)
@@ -505,10 +531,11 @@ class XBeachModelAnalysis():
                 ax.set_ylabel('y [m]')
 
         ax.set_aspect('equal')
+        fig.tight_layout()
 
         return fig, ax
 
-    def fig_map_var(self, var, label, it=np.inf):
+    def fig_map_var(self, var, label, it=np.inf, figsize=None, **kwargs):
 
         self.load_modeloutput(var)
 
@@ -517,7 +544,7 @@ class XBeachModelAnalysis():
         assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
 
         data = self.var[var][it, :, :]
-        fig, ax = self._fig_map_var(data, label)
+        fig, ax = self._fig_map_var(data, label, figsize, **kwargs)
 
         if self.globalstarttime is None:
             ax.set_title('t = {:.1f}Hr'.format(self.var['globaltime'][it] ))
@@ -525,6 +552,9 @@ class XBeachModelAnalysis():
             ax.set_title('t = {}'.format(self.var['globaltime'][it]))
         if self.save_fig:
             plt.savefig(os.path.join(self.model_path, 'fig', 'map_{}_it_{}.png'.format(var,it)), dpi=200)
+
+        fig.tight_layout()
+
         return fig, ax
 
     def fig_map_diffvar(self, var, label, it0=0, itend=np.inf, clim=None):
@@ -559,6 +589,57 @@ class XBeachModelAnalysis():
             plt.savefig(os.path.join(self.model_path, 'fig', 'difmap_{}_it_{}-{}.png'.format(var, itend, it0)), dpi=200)
         return fig, ax
 
+    def fig_cross_var(self,var, it, iy=None, coord=None, plot_ref_bathy=True):
+        assert not ((iy is None) & (coord is None)), 'specify either an alongshore index iy or a coordinate coord'
+
+        try:
+            self.load_modeloutput(var)
+        except:
+            print('var not found as output specified in params. Will try to continue to see if computed earlier')
+        self.load_modeloutput('zb')
+
+        x = self.var['globalx']
+        y = self.var['globaly']
+        t = self.var['globaltime'][it]
+
+        if iy is None:
+            iy, _ = np.unravel_index(((x - coord[0]) ** 2 + (y - coord[1]) ** 2).argmin(), x.shape)
+
+        data = self.var[var][it, iy, :]
+        z = self.var['zb'][it, iy, :]
+        cross = self.var['cross']
+
+        fig, ax1 = plt.subplots(figsize=[5, 3])
+
+        ax1.plot(cross, data, 'k.-')
+
+        if self.plot_km_coords:
+            ax1.set_xlabel('cross shore [km]')
+        else:
+            ax1.set_xlabel('cross shore [m]')
+
+        if plot_ref_bathy:
+            ax2 = ax1.twinx()
+            ax1.set_zorder(ax2.get_zorder() + 1)  # move ax in front
+            ax1.patch.set_visible(False)
+
+            ax2.fill_between(cross, z, -25, color='lightgrey')
+            ax2.set_ylim([-25, z.max() + 1])
+            ax2.set_ylabel('$z_b$ [m+NAP]', color='lightgrey')
+
+            ax = [ax1, ax2]
+        else:
+            ax = ax1
+
+        ax1.set_xlim([cross.min(), cross.max()])
+        ax1.set_ylabel(var + ' [' + self.units[var] + ']', color='k')
+        ax1.set_title('time: {}'.format(t))
+        plt.tight_layout()
+        if self.save_fig:
+            plt.savefig(os.path.join(self.model_path, 'fig', '{}_iy{}_it{}.png'.format(var, iy, it)),
+                        dpi=200)
+
+        return fig, ax
 
     def fig_profile_change(self, iy=None, coord=None):
         if iy is None:
@@ -576,7 +657,6 @@ class XBeachModelAnalysis():
             else:
                 ne = self.grd['ne']
             ne = zb[0, :, :]-ne
-
 
         fig, ax = plt.subplots()
         plt.plot(cross, np.nanmax(zs, axis=0)[iy, :], color='blue', label='zs-max')
@@ -638,6 +718,7 @@ class XBeachModelAnalysis():
             v = np.flipud(self.var[var[1]][it, ifrac, :, :].data)
             data = np.sqrt((self.var[var[0]][it, ifrac, :, :]) ** 2 + (self.var[var[1]][it, ifrac, :, :]) ** 2).squeeze()
 
+        # u, v = xb.rotate_grid(u, v, self.var['gridang'])
         u, v = xb.rotate_grid(u, v, self.var['gridang'])
 
         fu = interp2d(x[:, 0], y[0, :], u.T)
