@@ -297,7 +297,6 @@ class XBeachModelAnalysis():
             self.var['globaly'] = y
 
         self.var['gridang'] = np.arctan2(y[0, 0]-y[-1, 0], x[0, 0]-x[-1, 0])
-        # self.var['gridang'] = np.arctan2(y[0, -1] - y[0, 0], x[0, -1] - x[0, 0])
 
         def path_distance(polx, poly):
             '''
@@ -551,7 +550,10 @@ class XBeachModelAnalysis():
         else:
             ax.set_title('t = {}'.format(self.var['globaltime'][it]))
         if self.save_fig:
-            plt.savefig(os.path.join(self.model_path, 'fig', 'map_{}_it_{}.png'.format(var,it)), dpi=200)
+            folder = os.path.join(self.model_path, 'fig', 'map_{}'.format(var[0]))
+            if not os.path.exists(folder):
+                os.mkdir(folder)
+            plt.savefig(os.path.join(folder, 'map_{}_it_{}.png'.format(var, it)), dpi=200)
 
         fig.tight_layout()
 
@@ -589,7 +591,7 @@ class XBeachModelAnalysis():
             plt.savefig(os.path.join(self.model_path, 'fig', 'difmap_{}_it_{}-{}.png'.format(var, itend, it0)), dpi=200)
         return fig, ax
 
-    def fig_cross_var(self,var, it, iy=None, coord=None, plot_ref_bathy=True):
+    def fig_cross_var(self,var, it, iy=None, coord=None, plot_ref_bathy=True, zmin=-25):
         assert not ((iy is None) & (coord is None)), 'specify either an alongshore index iy or a coordinate coord'
 
         try:
@@ -624,7 +626,7 @@ class XBeachModelAnalysis():
             ax1.patch.set_visible(False)
 
             ax2.fill_between(cross, z, -25, color='lightgrey')
-            ax2.set_ylim([-25, z.max() + 1])
+            ax2.set_ylim([zmin, z.max() + 1])
             ax2.set_ylabel('$z_b$ [m+NAP]', color='lightgrey')
 
             ax = [ax1, ax2]
@@ -636,7 +638,10 @@ class XBeachModelAnalysis():
         ax1.set_title('time: {}'.format(t))
         plt.tight_layout()
         if self.save_fig:
-            plt.savefig(os.path.join(self.model_path, 'fig', '{}_iy{}_it{}.png'.format(var, iy, it)),
+            folder = os.path.join(self.model_path, 'fig', '{}_iy{}'.format(var, iy))
+            if not os.path.exists(folder):
+                os.mkdir(folder)
+            plt.savefig(os.path.join(folder, '{}_iy{}_it{}.png'.format(var, iy, it)),
                         dpi=200)
 
         return fig, ax
@@ -718,7 +723,6 @@ class XBeachModelAnalysis():
             v = np.flipud(self.var[var[1]][it, ifrac, :, :].data)
             data = np.sqrt((self.var[var[0]][it, ifrac, :, :]) ** 2 + (self.var[var[1]][it, ifrac, :, :]) ** 2).squeeze()
 
-        # u, v = xb.rotate_grid(u, v, self.var['gridang'])
         u, v = xb.rotate_grid(u, v, self.var['gridang'])
 
         fu = interp2d(x[:, 0], y[0, :], u.T)
@@ -740,7 +744,10 @@ class XBeachModelAnalysis():
         else:
             ax.set_title('t = {}'.format(self.var['globaltime'][it]))
         if self.save_fig:
-            plt.savefig(os.path.join(self.model_path, 'fig', 'map_quiver_{}_it_{}.png'.format(var[0], it)), dpi=200)
+            folder = os.path.join(self.model_path, 'fig', 'map_quiver_{}'.format(var[0]))
+            if not os.path.exists(folder):
+                os.mkdir(folder)
+            plt.savefig(os.path.join(folder, 'map_quiver_{}_it_{}.png'.format(var[0], it)), dpi=200)
 
         if ja_plot_localcoords is False:
             self.set_plot_localcoords(False)
