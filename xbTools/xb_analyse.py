@@ -238,6 +238,24 @@ class XBeachModelAnalysis():
 
         ds = nc.Dataset(os.path.join(self.model_path, 'xboutput.nc'))
 
+        # grid
+        x = ds.variables['globalx'][:]
+        y = ds.variables['globaly'][:]
+        if len(self.AOI) > 0:
+            assert len(self.AOI) == 4, 'AOI should be specified as [x0, xend, y0, yend]'
+
+            x = x[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+            y = y[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+
+        if self.plot_km_coords:
+            self.var['globalx'] = x / 1e3
+            self.var['globaly'] = y / 1e3
+        else:
+            self.var['globalx'] = x
+            self.var['globaly'] = y
+
+        self.var['gridang'] = np.arctan2(y[0, 0] - y[-1, 0], x[0, 0] - x[-1, 0])
+
         # global variable time
         if self.globalstarttime is None:
             self.var['globaltime'] = ds.variables['globaltime'][:]
@@ -275,28 +293,9 @@ class XBeachModelAnalysis():
                 station_list.append(sn)
             station_list = [x.strip() for x in station_list]
             self.var['station_id'] = station_list
-            # self.var['station_x'] =
-            # self.var['station_y'] =
 
             self.var['station_x'] = ds.variables['pointx'][:]
             self.var['station_y'] = ds.variables['pointy'][:]
-
-        x = ds.variables['globalx'][:]
-        y = ds.variables['globaly'][:]
-        if len(self.AOI) > 0:
-            assert len(self.AOI) == 4, 'AOI should be specified as [x0, xend, y0, yend]'
-
-            x = x[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
-            y = y[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
-
-        if self.plot_km_coords:
-            self.var['globalx'] = x/1e3
-            self.var['globaly'] = y/1e3
-        else:
-            self.var['globalx'] = x
-            self.var['globaly'] = y
-
-        self.var['gridang'] = np.arctan2(y[0, 0]-y[-1, 0], x[0, 0]-x[-1, 0])
 
         def path_distance(polx, poly):
             '''
@@ -331,6 +330,16 @@ class XBeachModelAnalysis():
         if self.plot_km_coords:
             self.var['localx'] = self.var['localx']/1e3
             self.var['localy'] = self.var['localy']/1e3
+
+        # point output coordinates in local coordinates
+        self.var['station_x_local'] = []
+        self.var['station_y_local'] = []
+        for sx, sy in zip(self.var['station_x'], self.var['station_y']):
+            iy, ix = np.unravel_index(((self.var['globalx'][:] - sx) ** 2 + \
+                                       (self.var['globaly'][:] - sy) ** 2).argmin(),
+                                      [int(self.params['ny'] + 1), int(self.params['nx'] + 1)])
+            self.var['station_x_local'].append(self.var['localx'][iy, ix])
+            self.var['station_y_local'].append(self.var['localy'][iy, ix])
 
         return
 
