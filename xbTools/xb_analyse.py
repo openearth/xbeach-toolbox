@@ -506,6 +506,7 @@ class XBeachModelAnalysis():
             x = self.var['globalx']
             y = self.var['globaly']
 
+
         fig, ax = plt.subplots(figsize=figsize)
         im = ax.pcolor(x, y, dat, **kwargs)
         divider = make_axes_locatable(ax)
@@ -568,7 +569,7 @@ class XBeachModelAnalysis():
 
         return fig, ax
 
-    def fig_map_diffvar(self, var, label, it0=0, itend=np.inf, clim=None):
+    def fig_map_diffvar(self, var, label, it0=0, itend=np.inf, clim=None, figsize=None, **kwargs):
         assert itend > it0, 'itend must be larger than it0'
         assert it0 >= 0, 'it0 should be >= 0'
 
@@ -586,7 +587,7 @@ class XBeachModelAnalysis():
         var0 = self.var['zb'][it0, :, :]
         varend = self.var['zb'][itend, :, :]
 
-        fig, ax = self._fig_map_var(varend - var0, label, **kwargs)
+        fig, ax = self._fig_map_var(varend - var0, label, figsize, **kwargs)
 
         #make title
         if self.globalstarttime is None:
@@ -595,6 +596,8 @@ class XBeachModelAnalysis():
         else:
             ax.set_title('{} - {}'.format(self.var['globaltime'][itend],
                                                       self.var['globaltime'][it0]))
+
+        fig.tight_layout()
 
         if self.save_fig:
             plt.savefig(os.path.join(self.model_path, 'fig', 'difmap_{}_it_{}-{}.png'.format(var, itend, it0)), dpi=200)
