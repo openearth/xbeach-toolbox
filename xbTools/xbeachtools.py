@@ -147,7 +147,7 @@ def offshore_depth(Hm0, Tp, depth_offshore_profile, depth_boundary_conditions):
             cg, n_startdepth        = wavecelerity(Tp, d_start)
             Hm0_shoal               = Hm0 * np.sqrt(cg_bc/cg)
             ## update count
-            count =+ 1
+            count =count+ 1
             if count>50:
                 print('no convergence')
                 break
