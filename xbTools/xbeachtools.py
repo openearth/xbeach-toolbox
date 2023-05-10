@@ -5,94 +5,8 @@ import json
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
 
-from xbTools.wave_functions import dispersion, wavecelerity
-
-
-def xb_run_script_win(xb, N, maindir, xbeach_exe):
-    '''
-    Create batch script to run simulations.
-
-    Parameters
-    ----------
-    xb : LIST or CLASS
-        list with simulation paths or XBeachModelSetup class
-    N : int
-        Number of batch scripts.
-    maindir : TYPE
-        path where run script is created.
-    xbeach_exe : TYPE
-        path of XBeach executable.
-
-    Returns
-    -------
-    None.
-
-    '''
-    ## check xb, and create path_sims list
-    if isinstance(xb,list):
-        if isinstance(xb[0],XBeachModelSetup):
-            path_sims = []
-            for item in xb:
-                path_sims.append(item.model_path)
-        elif isinstance(xb[0],str):
-            path_sims = [xb]
-        else:
-            print('Unvalid path')
-    else:
-        path_sims = [xb.model_path]
-    
-    ## number of batch scripts
-    Nmax = int(np.ceil(len(path_sims)/N))
-    
-    ## string
-    string      = ''
-    count       = 0
-    run_number  = 0
-    for ii, path_sim in enumerate(path_sims):
-        string = string + 'cd {} \ncall {}\n'.format(path_sim,xbeach_exe)
-        if count==Nmax:
-            with open(os.path.join(maindir,'run{}.bat'.format(run_number)), 'w') as f:
-                f.write(string)
-            count = 0
-            run_number = run_number + 1
-            string = ''
-        count = count +1
-    if count<=Nmax:
-        print(os.path.join(maindir,'run{}.bat'.format(run_number)))
-        with open(os.path.join(maindir,'run{}.bat'.format(run_number)), 'w') as f:
-            f.write(string)
-    
-    
-
-def _celerity_ratio_equals_09(Tp,d_start):
-    '''
-    function to find water depth for which the n ration equal 0.9
-
-    Parameters
-    ----------
-    Tp : float
-        peak period.
-    d_start : float
-        Water depth.
-
-    Returns
-    -------
-    d : float
-        depth.
-
-    '''
-    d_dummy     = d_start
-    count2      = 1
-    n           = 1
-    while n>0.9:
-        cg, n       = wavecelerity(Tp, d_dummy)
-        d_dummy     = d_dummy + 0.05;
-        count2      = count2+1;
-        if count2>500:
-            print('No n value found!')
-            break 
-    d = d_dummy
-    return d
+from xbTools.general.wave_functions import dispersion, wavecelerity, celerity_ratio_equals_09
+from xbTools.general.geometry import rotate_grid
 
 def offshore_depth(Hm0, Tp, depth_offshore_profile, depth_boundary_conditions):
     '''
@@ -137,7 +51,7 @@ def offshore_depth(Hm0, Tp, depth_offshore_profile, depth_boundary_conditions):
         d_start             = depth_offshore_profile
         d_start_previous    = 2 * depth_offshore_profile
         count               = 1
-        d_n                 = _celerity_ratio_equals_09(Tp,d_start)
+        d_n                 = celerity_ratio_equals_09(Tp,d_start)
         while np.abs(d_start-d_start_previous)>0.05:
             ## update depth
             d_start_previous = d_start
@@ -165,11 +79,6 @@ def offshore_depth(Hm0, Tp, depth_offshore_profile, depth_boundary_conditions):
         print('n profile = {}'.format(n_profile))
         print('n slope = {}'.format(n_startdepth))
     return d_start, slope, Hm0_shoal
-
-
-
-
-
 
 def lateral_extend(x,y,z,n=5):
     '''
@@ -223,7 +132,6 @@ def lateral_extend(x,y,z,n=5):
         ynew[i,:]       = y[0,:]-dy1*n+dy1*i
         ynew[-(i+1),:]  = y[-1,:]+dy2*n-dy2*i
     return xnew, ynew, znew
-
 
 def seaward_extend(x,y,z,slope=1/20,depth=-20):
     '''
@@ -301,8 +209,6 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
     
     return xgr, ygr, zgr
         
-
-
 def xgrid(x,z,
           ppwl=20,
           dxmin=5,
@@ -481,7 +387,6 @@ def xgrid(x,z,
         xgr = xgr-xgr[-1]+xend
     return xgr, zgr
 
-
 def grid_transition(cell1, cell2, distance):
     
     precision = 1e-10
@@ -558,8 +463,6 @@ def grid_transition(cell1, cell2, distance):
     
     return ff, nf, gridf, error
 
-
-    
 def ygrid(y,
            dymin = 5,
            dymax = 20,
@@ -645,164 +548,7 @@ def ygrid(y,
              tmp = np.concatenate((np.flip(np.arange( ygr[0] - dymax, np.min(y) - dymax, -1*dymax)), ygr ))
              ygr = np.concatenate((tmp, np.arange( ygr[-1] + dymax, np.max(y) + dymax, dymax) ))
             
-    return ygr
-                
- 
-def rotate(x, y, theta):
-    '''
-    rotates the coordinates (x,y) through an angle theta
-    if x,y are matrices, these are first flattened.
-    output: rotated arrays x,y
-
-    author: Marlies van der Lugt
-    revision: v0    
-
-    Parameters
-    ----------
-    x : float
-        x-coordinate.
-    y : float
-        y-coordinate.
-    theta : floatd
-        angle in radians.
-
-    Returns
-    -------
-    TYPE
-        rotated coordinates.
-
-    '''
-    
-    rotMatrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-    coords = np.vstack((x.flatten(), y.flatten()))
-    return rotMatrix @ coords
-
-
-def rotate_grid(xgr, ygr, theta):
-    '''
-    rotate_grid(xgr,ygr,theta)
-    rotates a grid xgr,ygr over the angle theta (in radians)
-
-    author: Marlies van der Lugt
-    revision: v0
-
-    Parameters
-    ----------
-    xgr : array
-        x grid.
-    ygr : array
-        y grid.
-    theta : floatd
-        ange in radians.
-
-    Returns
-    -------
-    uv : array
-        rotated grid.
-    vd : array
-        rotated grid.
-
-    '''
-    
-    ny, nx = xgr.shape
-    coords = np.vstack((xgr.reshape(-1), ygr.reshape(-1)))
-    rotMatrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-    uv, vd = rotMatrix @ coords
-    uv = uv.reshape([ny, nx])
-    vd = vd.reshape([ny, nx])
-    return uv, vd
-    
-def grid_world2local(xgr, ygr):
-    '''
-    identifies the rotation angle of the x-axis of a 2D XBeach grid and returns grid in local coordinates
-    (i.e. x only cross shore, y only alongshore)
-
-    output: rotated grid x,y and grid angle alpha
-
-    author: Marlies van der Lugt
-    revision: v0    
-
-    Parameters
-    ----------
-    xgr : array
-        x-grid.
-    ygr : array
-        y-grid.
-
-    Returns
-    -------
-    xl : array
-        x-grid in local coordinates
-    yl : array
-        y-grid in local coordinates
-    alpha : TYPE
-        rotation.
-
-    '''
-    
-    #rotation of the grid
-    alpha = np.arctan2(ygr[0,-1]-ygr[0,0],xgr[0,-1]-xgr[0,0])
-    
-    #the origin of the grid
-    x0 = xgr[0,0]
-    y0 = ygr[0,0]
-    
-    #to local coordinates
-    xl,yl = rotate_grid(xgr-x0,ygr-y0,alpha) 
-    
-    return xl, yl, alpha
-    
-    
-
-def samples_to_local_grid(xs,ys,x0,y0,theta):
-    '''
-    # rephrase samples in local grid coordinates for simple interpolation and modification
-    Input variables
-    :param xs: x-world coordinates of samples
-    :param ys: y-world coordinates of samples
-    :param x0: x-origin of grid in world coordinates
-    :param y0: y-origin of grid in world coordinates
-    :param theta: angle of x-dir (nautical
-    :return:
-    xl: x-coordinates of samples in local coordinates
-    yl: y-coordintes of samples in local coordinates
-
-    author: Marlies van der Lugt
-    revision: v0
-    '''
-
-    xs2 = xs-x0
-    ys2 = ys-y0
-    return rotate(xs2,ys2,-theta)
-
-
-def in_polygon(x,y,poli):
-    '''
-    checks whether the coordinate (x,y) or list of coordinates (xi,yi) fall 
-    within the polygon poli.
-    
-    Parameters
-    ----------
-    x : numpy array, either 1D or 2D
-        x coordinates.
-    y : numpy array, either 1D or 2D
-        y coordintes.
-    poli : shapely Polygon geometry
-        polygon to test.
-
-    Returns
-    -------
-    ip : numpy array, either 1D or 2D
-        mask being 1 if in polyon, 0 outside polygon.
-
-    Author: Marlies van der Lugt
-    Revision 0 
-    '''
-    ny,nx = x.shape
-    p = [Point(ix, iy) for ix, iy in zip(x.flatten(),y.flatten())]
-    # pdb.set_trace()
-    ip = np.array([poli.contains(p[i]) for i in range(len(p))]).reshape(ny,nx)
-    return ip 
+    return ygr 
     
 def grid_refine_grid(xgr,ygr,xfactor = 2, yfactor = 1):
     '''
@@ -848,13 +594,10 @@ def grid_refine_grid(xgr,ygr,xfactor = 2, yfactor = 1):
     
     return xgr2, ygr2 
     
- 
-    
 class XBeachModelSetup():
     '''
     XBeach model setup class
     ''' 
-    
     
     def __init__(self,fname):
         self.fname      = fname
@@ -869,7 +612,6 @@ class XBeachModelSetup():
         
     def __repr__(self):
         return self.fname
-    
     
     def set_params(self,input_par_dict):
         
@@ -907,8 +649,6 @@ class XBeachModelSetup():
             if not value_added:
                 self.input_par['par'][input_par] = input_par_dict[input_par]
             
-        
-    
     def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0,alfa=0, thetamin=-90, thetamax = 90, dtheta=10, dtheta_s=10):
         
         ##
@@ -952,9 +692,6 @@ class XBeachModelSetup():
         self.vardx  = 1
         self.alfa = alfa
         self.dtheta_s = dtheta_s
-<<<<<<< Updated upstream
-    
-=======
 
     def set_nebed(self, nebed, struct=1):      
         '''
@@ -1007,7 +744,6 @@ class XBeachModelSetup():
         self.wavefriction = wavefriction
         self.wavefriction_layer = wavefriction_layer
 
->>>>>>> Stashed changes
     def set_waves(self,wbctype, input_struct):
         self.wbctype = wbctype
         ##
@@ -1026,7 +762,6 @@ class XBeachModelSetup():
     def set_vegetation(self):
         pass
 
-        
     def set_tide(self):
         pass
         
@@ -1034,8 +769,6 @@ class XBeachModelSetup():
         ## todo
         pass    
 
-        
-        
     def write_model(self, path, figure=True):
         self.model_path = path
         path_params = os.path.join(path,'params.txt')
@@ -1047,7 +780,6 @@ class XBeachModelSetup():
         user            =  os.path.basename(os.path.expanduser('~'))
         
         tabnumber = 20
-        
         
         ## waves boundary
         if self.wbctype=='parametric':
@@ -1141,6 +873,7 @@ class XBeachModelSetup():
                 for jj in range(self.nx+1):
                     f.write('{} '.format(self.xgr[ii,jj]))
                 f.write('\n')
+
         if not self.fast1D:
             ## write grid y
             with open(os.path.join(path,'y.grd'),'w') as f:
@@ -1155,6 +888,28 @@ class XBeachModelSetup():
                     f.write('{} '.format(self.zgr[ii,jj]))
                 f.write('\n')             
                 
+        ## write ne-layer
+        if self.struct != None:
+            with open(os.path.join(path,'ne_bed.dep'),'w') as f:
+                for ii in range(self.ny+1):
+                    for jj in range(self.nx+1):
+                        f.write('{} '.format(self.nebed[ii,jj]))
+                    f.write('\n')   
+                
+        if self.friction_layer != None:
+            with open(os.path.join(path,'friction.dep'),'w') as f:
+                for ii in range(self.ny+1):
+                    for jj in range(self.nx+1):
+                        f.write('{} '.format(self.friction[ii,jj]))
+                    f.write('\n')  
+                    
+        if self.wavefriction_layer != None:
+            with open(os.path.join(path,'wavefriction.dep'),'w') as f:
+                for ii in range(self.ny+1):
+                    for jj in range(self.nx+1):
+                        f.write('{} '.format(self.wavefriction[ii,jj]))
+                    f.write('\n')   
+
         ## write figures
         if figure:
             ## plot and write domain
@@ -1210,7 +965,7 @@ class XBeachModelSetup():
         None.
 
         '''
-        plt.figure(figsize=[10,10])
+        fig1 = plt.figure(figsize=(8,8))
         if self.fast1D==True:
             plt.subplot(2,1,1)
             plt.plot(np.squeeze(self.xgr),np.squeeze(self.zgr)*self.posdwn)
@@ -1238,10 +993,6 @@ class XBeachModelSetup():
             plt.colorbar()
             plt.title('World coordinates')
         plt.suptitle(self.fname)
-<<<<<<< Updated upstream
-        if save_path!=None:
-            plt.savefig(os.path.join(save_path,'domain.png'))
-=======
 
         if self.struct == 1:
             fig2 = plt.figure()
@@ -1284,4 +1035,3 @@ class XBeachModelSetup():
                 fig3.savefig(os.path.join(save_path,'friction.png'),dpi=250)
             if self.wavefriction_layer == 1:
                 fig4.savefig(os.path.join(save_path,'wavefriction.png'),dpi=250)
->>>>>>> Stashed changes
