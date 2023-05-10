@@ -863,6 +863,9 @@ class XBeachModelSetup():
         self.wavemodel  = None
         
         self.model_path = None
+
+        self.friction_layer = None
+        self.wavefriction_layer = None
         
     def __repr__(self):
         return self.fname
@@ -949,7 +952,62 @@ class XBeachModelSetup():
         self.vardx  = 1
         self.alfa = alfa
         self.dtheta_s = dtheta_s
+<<<<<<< Updated upstream
     
+=======
+
+    def set_nebed(self, nebed, struct=1):      
+        '''
+        function to set non erodible bed for the xbeach model
+
+        Parameters
+        ----------
+        nebed : input of sandy layer thickness
+        struct : optional. The default is 1.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.nebed = nebed
+        self.struct = struct
+        
+    def set_friction(self, friction, friction_layer = 1):      
+        '''
+        function to set friction layer for the xbeach model
+
+        Parameters
+        ----------
+        nebed : input of sandy layer thickness
+        struct : optional. The default is 1.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.friction = friction
+        self.friction_layer = friction_layer
+        
+    def set_wavefriction(self, wavefriction, wavefriction_layer = 1):      
+        '''
+        function to set friction layer for the xbeach model
+
+        Parameters
+        ----------
+        nebed : input of sandy layer thickness
+        struct : optional. The default is 1.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.wavefriction = wavefriction
+        self.wavefriction_layer = wavefriction_layer
+
+>>>>>>> Stashed changes
     def set_waves(self,wbctype, input_struct):
         self.wbctype = wbctype
         ##
@@ -1180,5 +1238,50 @@ class XBeachModelSetup():
             plt.colorbar()
             plt.title('World coordinates')
         plt.suptitle(self.fname)
+<<<<<<< Updated upstream
         if save_path!=None:
             plt.savefig(os.path.join(save_path,'domain.png'))
+=======
+
+        if self.struct == 1:
+            fig2 = plt.figure()
+        
+            plt.pcolor(self.xgr,self.ygr,self.nebed)
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.colorbar()
+            plt.title('ne_bed.dep (positive)')
+            plt.axis('scaled')
+            plt.grid('on')
+                
+        if self.friction_layer == 1:
+            fig3 = plt.figure()
+        
+            plt.pcolor(self.xgr,self.ygr,self.friction)
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.colorbar()
+            plt.title('friction.dep (positive)')#+self.input_par['Flow parameters']['bedfriction'])
+            plt.axis('scaled')
+            plt.grid('on')
+                
+        if self.wavefriction_layer == 1:
+            fig4 = plt.figure()
+        
+            plt.pcolor(self.xgr,self.ygr,self.wavefriction)
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.colorbar()
+            plt.title('wavefriction.dep (positive) - fw')
+            plt.axis('scaled')
+            plt.grid('on')
+
+        if save_path!=None:
+            fig1.savefig(os.path.join(save_path,'domain.png'),dpi=250)
+            if self.struct == 1:
+                fig2.savefig(os.path.join(save_path,'ne_bed.png'),dpi=250)
+            if self.friction_layer == 1:
+                fig3.savefig(os.path.join(save_path,'friction.png'),dpi=250)
+            if self.wavefriction_layer == 1:
+                fig4.savefig(os.path.join(save_path,'wavefriction.png'),dpi=250)
+>>>>>>> Stashed changes
