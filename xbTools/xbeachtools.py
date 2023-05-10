@@ -606,6 +606,9 @@ class XBeachModelSetup():
         self.wavemodel  = None
         
         self.model_path = None
+
+        self.friction_layer = None
+        self.wavefriction_layer = None
         
     def __repr__(self):
         return self.fname
@@ -707,7 +710,11 @@ class XBeachModelSetup():
         self.nebed = nebed
         self.struct = struct
         
+<<<<<<< HEAD
     def set_friction(self, friction):      
+=======
+    def set_friction(self, friction, friction_layer = 1):      
+>>>>>>> 5-enhance-_plotdomain-function-in-xbeach-class
         '''
         function to set friction layer for the xbeach model
 
@@ -722,9 +729,15 @@ class XBeachModelSetup():
 
         '''
         self.friction = friction
+<<<<<<< HEAD
         self.friction_layer = 1
         
     def set_wavefriction(self, wavefriction):      
+=======
+        self.friction_layer = friction_layer
+        
+    def set_wavefriction(self, wavefriction, wavefriction_layer = 1):      
+>>>>>>> 5-enhance-_plotdomain-function-in-xbeach-class
         '''
         function to set friction layer for the xbeach model
 
@@ -739,7 +752,11 @@ class XBeachModelSetup():
 
         '''
         self.wavefriction = wavefriction
+<<<<<<< HEAD
         self.wavefriction_layer = 1
+=======
+        self.wavefriction_layer = wavefriction_layer
+>>>>>>> 5-enhance-_plotdomain-function-in-xbeach-class
 
     def set_waves(self,wbctype, input_struct):
         self.wbctype = wbctype
@@ -1009,7 +1026,11 @@ class XBeachModelSetup():
             plt.xlabel('x')
             plt.ylabel('y')
             plt.colorbar()
+<<<<<<< HEAD
             plt.title('friction.dep (positive) - '+self.input_par['Flow parameters']['bedfriction'])
+=======
+            plt.title('friction.dep (positive)')#+self.input_par['Flow parameters']['bedfriction'])
+>>>>>>> 5-enhance-_plotdomain-function-in-xbeach-class
             plt.axis('scaled')
             plt.grid('on')
                 
@@ -1026,6 +1047,15 @@ class XBeachModelSetup():
 
         if save_path!=None:
             fig1.savefig(os.path.join(save_path,'domain.png'),dpi=250)
+<<<<<<< HEAD
             fig2.savefig(os.path.join(save_path,'ne_bed.png'),dpi=250)
             fig3.savefig(os.path.join(save_path,'friction.png'),dpi=250)
             fig4.savefig(os.path.join(save_path,'wavefriction.png'),dpi=250)
+=======
+            if self.struct == 1:
+                fig2.savefig(os.path.join(save_path,'ne_bed.png'),dpi=250)
+            if self.friction_layer == 1:
+                fig3.savefig(os.path.join(save_path,'friction.png'),dpi=250)
+            if self.wavefriction_layer == 1:
+                fig4.savefig(os.path.join(save_path,'wavefriction.png'),dpi=250)
+>>>>>>> 5-enhance-_plotdomain-function-in-xbeach-class
