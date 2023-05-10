@@ -1,3 +1,9 @@
+"""
+Created on Wed May 5 10:04:00 2023
+
+@author: Menno de Ridder
+collection containing wave functions
+"""
 import numpy as np
 
 def dispersion(w, d, max_error=0.00001,g=9.81):
