@@ -1,7 +1,12 @@
 import matplotlib.pyplot as plt
-from scripts.xb_analyse import XBeachModelAnalysis
+import sys
+import os
+## import xbeach tools
+sys.path.append(os.path.abspath(os.path.join('..' )))
+from xbTools import XBeachModelAnalysis
 
-r03 = XBeachModelAnalysis('r03', r'd:\\Repositories\\xbeach_toolbox\\xbeach-toolbox-trunk\\xbeach-toolbox\\examples\\xb-1D\\')
+
+r03 = XBeachModelAnalysis('r03', r'p:\\11205071-springertduinen\\01_3Dtoeslag\\01_sims\\iter06\\2D_kerven\\')
 
 # load the xbeach model set-up
 r03.load_model_setup()

@@ -17,9 +17,9 @@ plt.style.use(os.path.join('..','xbTools','xb.mplstyle'))
 ###  input                                                                  ###
 ###############################################################################
 
-zs0 = 5
-Hm0 = 9
-Tp  = 15
+zs0 = 0
+Hm0 = 5
+Tp  = 12
 
 
 
@@ -89,7 +89,7 @@ plt.title('xb bathy')
 ###  seaward extend                                                         ###
 ###############################################################################
 
-d_start, slope, Hm0_shoal = offshore_depth(Hm0=9, Tp=15, depth_offshore_profile=abs(bathy[0]), depth_boundary_conditions=20)
+d_start, slope, Hm0_shoal = offshore_depth(Hm0=5, Tp=12, depth_offshore_profile=abs(bathy[0]), depth_boundary_conditions=20)
 
 xgr, ygr, zgr = seaward_extend(xgr,[0],zgr,slope=slope,depth=d_start*-1)
 

@@ -122,8 +122,8 @@ class XBeachModelAnalysis():
         if params['npointvar'] > 0:
             i0 = [i for i, var in enumerate(dat) if 'npoints' in var][0]
             points = dat[i0 + 1:i0 + int(params['npoints'] + 1)]
-            x = [float(t[0]) for t in points]
-            y = [float(t[1]) for t in points]
+            x = [float(t.split(' ')[0]) for t in points]
+            y = [float(t.split(' ')[1]) for t in points]
             name = [t[2].strip() for t in points]
             params['points'] = dict(zip(name, zip(x, y)))
         else:
@@ -132,11 +132,7 @@ class XBeachModelAnalysis():
         self.params = params
 
     def load_grid(self):
-        # only works currently for xbeach type grids (xfile, yfile)
-
-        # read params.txt if this is not done yet
-        if self.params is None:
-            self.get_params()
+        # only works currently for xbeach type grids (xfile, yfile)!!!
 
         # load obligatory files
         self.grd['x'] = np.loadtxt(os.path.join(self.model_path, self.params['xfile']))
@@ -153,14 +149,11 @@ class XBeachModelAnalysis():
             self.grd['y'] = np.loadtxt(os.path.join(self.model_path, self.params['yfile']))
             assert self.grd['y'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'y grid not of correct size'
 
-        if int(self.params['struct']) == 1:
+        if 'struct' in self.params == 1:
             self.grd['ne'] = np.loadtxt(os.path.join(self.model_path, self.params['ne_layer']))
             assert self.grd['ne'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'ne grid not of correct size'
 
     def get_waves(self):
-        # read params.txt if this is not done yet
-        if self.params is None:
-            self.get_params()
 
         # waves boundary
         if self.params['wbctype'] == 'jonstable':
@@ -177,7 +170,7 @@ class XBeachModelAnalysis():
             self.waves_boundary['time'] = np.cumsum(dat[:, 5])
 
         elif self.params['wbctype'] == 'jons':
-            print('not yet written')
+            print('not yet possible')
             pass
         elif self.params['wbctype'] == 'params':
             self.waves_boundary['Hm0'] = np.sqrt(2)*float(self.params['Hrms'])
@@ -185,53 +178,47 @@ class XBeachModelAnalysis():
             self.waves_boundary['mainang'] = float( self.params['dir0'])
             self.waves_boundary['s'] = float(self.params['m']/2)
         else:
-            print('not yet written')
+            print('not yet possible')
             pass
 
     def get_vegetation(self):
         pass
 
     def get_tide(self):
-        if self.params is None:
-            self.get_params()
 
-        dat = np.loadtxt(os.path.join(self.model_path, self.params['zs0file']))
+        if 'zs0file' in self.params:
+            dat = np.loadtxt(os.path.join(self.model_path, self.params['zs0file']))
 
-        if int(self.params['tideloc']) == 1:
-            assert dat.shape[1] == 2, 'tideloc=1, expected 2 cols'
-        if int(self.params['tideloc']) == 2:
-            assert dat.shape[1] == 3, 'tideloc=2, expected 3 cols'
-        if int(self.params['tideloc']) == 4:
-            assert dat.shape[1] == 5, 'tideloc=1, expected 5 cols'
+            if int(self.params['tideloc']) == 1:
+                assert dat.shape[1] == 2, 'tideloc=1, expected 2 cols'
+            if int(self.params['tideloc']) == 2:
+                assert dat.shape[1] == 3, 'tideloc=2, expected 3 cols'
+            if int(self.params['tideloc']) == 4:
+                assert dat.shape[1] == 5, 'tideloc=1, expected 5 cols'
 
-        self.tide['time'] = dat[:, 0]
-        self.tide['zs0'] = dat[:, 1:]
-        self.tide['tideloc'] = self.params['tideloc']
-        if 'paulrevere' in self.params:
-            self.tide['paulrevere'] = self.params['paulrevere']
+            self.tide['time'] = dat[:, 0]
+            self.tide['zs0'] = dat[:, 1:]
+            self.tide['tideloc'] = self.params['tideloc']
+            if 'paulrevere' in self.params:
+                self.tide['paulrevere'] = self.params['paulrevere']
 
     def get_wind(self):
         if self.params is None:
             self.get_params()
 
-        if self.params['wind'] != 1:
-            print('no wind forcing was imposed')
-            return
-        
-            
-            
-        dat = np.loadtxt(os.path.join(self.model_path, self.params['windfile']))
+        if 'wind' in self.params:
+            dat = np.loadtxt(os.path.join(self.model_path, self.params['windfile']))
 
-        self.wind['time'] = dat[:, 0]
-        self.wind['u10'] = dat[:, 1]
-        self.wind['u10dir'] = dat[:, 2]
+            self.wind['time'] = dat[:, 0]
+            self.wind['u10'] = dat[:, 1]
+            self.wind['u10dir'] = dat[:, 2]
 
             
     def load_model_setup(self):
-        self.get_params()
         self.load_grid()
         self.get_waves()
         self.get_vegetation()
+        self.get_wind()
         self.get_tide()
 
     def load_output_coordinates(self):
