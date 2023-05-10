@@ -5,38 +5,8 @@ import json
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
 
-from xbTools.wave_functions import dispersion, wavecelerity
+from xbTools.general.wave_functions import dispersion, wavecelerity, celerity_ratio_equals_09
 from xbTools.general.geometry import rotate_grid
-
-def _celerity_ratio_equals_09(Tp,d_start):
-    '''
-    function to find water depth for which the n ration equal 0.9
-
-    Parameters
-    ----------
-    Tp : float
-        peak period.
-    d_start : float
-        Water depth.
-
-    Returns
-    -------
-    d : float
-        depth.
-
-    '''
-    d_dummy     = d_start
-    count2      = 1
-    n           = 1
-    while n>0.9:
-        cg, n       = wavecelerity(Tp, d_dummy)
-        d_dummy     = d_dummy + 0.05;
-        count2      = count2+1;
-        if count2>500:
-            print('No n value found!')
-            break 
-    d = d_dummy
-    return d
 
 def offshore_depth(Hm0, Tp, depth_offshore_profile, depth_boundary_conditions):
     '''
@@ -81,7 +51,7 @@ def offshore_depth(Hm0, Tp, depth_offshore_profile, depth_boundary_conditions):
         d_start             = depth_offshore_profile
         d_start_previous    = 2 * depth_offshore_profile
         count               = 1
-        d_n                 = _celerity_ratio_equals_09(Tp,d_start)
+        d_n                 = celerity_ratio_equals_09(Tp,d_start)
         while np.abs(d_start-d_start_previous)>0.05:
             ## update depth
             d_start_previous = d_start
@@ -109,11 +79,6 @@ def offshore_depth(Hm0, Tp, depth_offshore_profile, depth_boundary_conditions):
         print('n profile = {}'.format(n_profile))
         print('n slope = {}'.format(n_startdepth))
     return d_start, slope, Hm0_shoal
-
-
-
-
-
 
 def lateral_extend(x,y,z,n=5):
     '''
@@ -167,7 +132,6 @@ def lateral_extend(x,y,z,n=5):
         ynew[i,:]       = y[0,:]-dy1*n+dy1*i
         ynew[-(i+1),:]  = y[-1,:]+dy2*n-dy2*i
     return xnew, ynew, znew
-
 
 def seaward_extend(x,y,z,slope=1/20,depth=-20):
     '''
@@ -245,8 +209,6 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
     
     return xgr, ygr, zgr
         
-
-
 def xgrid(x,z,
           ppwl=20,
           dxmin=5,
@@ -425,7 +387,6 @@ def xgrid(x,z,
         xgr = xgr-xgr[-1]+xend
     return xgr, zgr
 
-
 def grid_transition(cell1, cell2, distance):
     
     precision = 1e-10
@@ -502,8 +463,6 @@ def grid_transition(cell1, cell2, distance):
     
     return ff, nf, gridf, error
 
-
-    
 def ygrid(y,
            dymin = 5,
            dymax = 20,
@@ -642,7 +601,6 @@ class XBeachModelSetup():
     XBeach model setup class
     ''' 
     
-    
     def __init__(self,fname):
         self.fname      = fname
         ## by default set wbctype and wavemodel to None
@@ -755,7 +713,6 @@ class XBeachModelSetup():
     def set_vegetation(self):
         pass
 
-        
     def set_tide(self):
         pass
         
@@ -763,8 +720,6 @@ class XBeachModelSetup():
         ## todo
         pass    
 
-        
-        
     def write_model(self, path, figure=True):
         self.model_path = path
         path_params = os.path.join(path,'params.txt')
@@ -776,7 +731,6 @@ class XBeachModelSetup():
         user            =  os.path.basename(os.path.expanduser('~'))
         
         tabnumber = 20
-        
         
         ## waves boundary
         if self.wbctype=='parametric':

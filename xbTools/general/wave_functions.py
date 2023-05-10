@@ -1,7 +1,5 @@
 import numpy as np
 
-
-
 def dispersion(w, d, max_error=0.00001,g=9.81):
     '''
     Computes the wave number given a radial frequeny and water depth
@@ -100,3 +98,32 @@ def directional_spread_kuik(theta,ee):
     dspr2 = 2 * (1 - np.sqrt((m0Sin / m0) ** 2 + (m0Cos / m0) ** 2))
     return np.rad2deg(np.sqrt(dspr2))  # directional spreading in degrees
 
+def celerity_ratio_equals_09(Tp,d_start):
+    '''
+    function to find water depth for which the n ration equal 0.9
+
+    Parameters
+    ----------
+    Tp : float
+        peak period.
+    d_start : float
+        Water depth.
+
+    Returns
+    -------
+    d : float
+        depth.
+
+    '''
+    d_dummy     = d_start
+    count2      = 1
+    n           = 1
+    while n>0.9:
+        cg, n       = wavecelerity(Tp, d_dummy)
+        d_dummy     = d_dummy + 0.05;
+        count2      = count2+1;
+        if count2>500:
+            print('No n value found!')
+            break 
+    d = d_dummy
+    return d
