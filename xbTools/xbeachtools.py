@@ -594,8 +594,6 @@ def grid_refine_grid(xgr,ygr,xfactor = 2, yfactor = 1):
     
     return xgr2, ygr2 
     
- 
-    
 class XBeachModelSetup():
     '''
     XBeach model setup class
@@ -611,7 +609,6 @@ class XBeachModelSetup():
         
     def __repr__(self):
         return self.fname
-    
     
     def set_params(self,input_par_dict):
         
@@ -649,8 +646,6 @@ class XBeachModelSetup():
             if not value_added:
                 self.input_par['par'][input_par] = input_par_dict[input_par]
             
-        
-    
     def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0,alfa=0, thetamin=-90, thetamax = 90, dtheta=10, dtheta_s=10):
         
         ##
@@ -694,7 +689,58 @@ class XBeachModelSetup():
         self.vardx  = 1
         self.alfa = alfa
         self.dtheta_s = dtheta_s
-    
+
+    def set_nebed(self, nebed, struct=1):      
+        '''
+        function to set non erodible bed for the xbeach model
+
+        Parameters
+        ----------
+        nebed : input of sandy layer thickness
+        struct : optional. The default is 1.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.nebed = nebed
+        self.struct = struct
+        
+    def set_friction(self, friction):      
+        '''
+        function to set friction layer for the xbeach model
+
+        Parameters
+        ----------
+        nebed : input of sandy layer thickness
+        struct : optional. The default is 1.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.friction = friction
+        self.friction_layer = 1
+        
+    def set_wavefriction(self, wavefriction):      
+        '''
+        function to set friction layer for the xbeach model
+
+        Parameters
+        ----------
+        nebed : input of sandy layer thickness
+        struct : optional. The default is 1.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.wavefriction = wavefriction
+        self.wavefriction_layer = 1
+
     def set_waves(self,wbctype, input_struct):
         self.wbctype = wbctype
         ##
@@ -824,6 +870,7 @@ class XBeachModelSetup():
                 for jj in range(self.nx+1):
                     f.write('{} '.format(self.xgr[ii,jj]))
                 f.write('\n')
+
         if not self.fast1D:
             ## write grid y
             with open(os.path.join(path,'y.grd'),'w') as f:
@@ -838,6 +885,28 @@ class XBeachModelSetup():
                     f.write('{} '.format(self.zgr[ii,jj]))
                 f.write('\n')             
                 
+        ## write ne-layer
+        if self.struct != None:
+            with open(os.path.join(path,'ne_bed.dep'),'w') as f:
+                for ii in range(self.ny+1):
+                    for jj in range(self.nx+1):
+                        f.write('{} '.format(self.nebed[ii,jj]))
+                    f.write('\n')   
+                
+        if self.friction_layer != None:
+            with open(os.path.join(path,'friction.dep'),'w') as f:
+                for ii in range(self.ny+1):
+                    for jj in range(self.nx+1):
+                        f.write('{} '.format(self.friction[ii,jj]))
+                    f.write('\n')  
+                    
+        if self.wavefriction_layer != None:
+            with open(os.path.join(path,'wavefriction.dep'),'w') as f:
+                for ii in range(self.ny+1):
+                    for jj in range(self.nx+1):
+                        f.write('{} '.format(self.wavefriction[ii,jj]))
+                    f.write('\n')   
+
         ## write figures
         if figure:
             ## plot and write domain
@@ -893,7 +962,7 @@ class XBeachModelSetup():
         None.
 
         '''
-        plt.figure(figsize=[10,10])
+        fig1 = plt.figure(figsize=(8,8))
         if self.fast1D==True:
             plt.subplot(2,1,1)
             plt.plot(np.squeeze(self.xgr),np.squeeze(self.zgr)*self.posdwn)
@@ -921,5 +990,42 @@ class XBeachModelSetup():
             plt.colorbar()
             plt.title('World coordinates')
         plt.suptitle(self.fname)
+
+        if self.struct == 1:
+            fig2 = plt.figure()
+        
+            plt.pcolor(self.xgr,self.ygr,self.nebed)
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.colorbar()
+            plt.title('ne_bed.dep (positive)')
+            plt.axis('scaled')
+            plt.grid('on')
+                
+        if self.friction_layer == 1:
+            fig3 = plt.figure()
+        
+            plt.pcolor(self.xgr,self.ygr,self.friction)
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.colorbar()
+            plt.title('friction.dep (positive) - '+self.input_par['Flow parameters']['bedfriction'])
+            plt.axis('scaled')
+            plt.grid('on')
+                
+        if self.wavefriction_layer == 1:
+            fig4 = plt.figure()
+        
+            plt.pcolor(self.xgr,self.ygr,self.wavefriction)
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.colorbar()
+            plt.title('wavefriction.dep (positive) - fw')
+            plt.axis('scaled')
+            plt.grid('on')
+
         if save_path!=None:
-            plt.savefig(os.path.join(save_path,'domain.png'))
+            fig1.savefig(os.path.join(save_path,'domain.png'),dpi=250)
+            fig2.savefig(os.path.join(save_path,'ne_bed.png'),dpi=250)
+            fig3.savefig(os.path.join(save_path,'friction.png'),dpi=250)
+            fig4.savefig(os.path.join(save_path,'wavefriction.png'),dpi=250)
