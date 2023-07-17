@@ -10,7 +10,8 @@ import os
 ## import xbeach tools
 sys.path.append(os.path.abspath(os.path.join('..')))
 
-from xbTools import xgrid, ygrid, seaward_extend, XBeachModelSetup, offshore_depth, xb_run_script_win
+from xbTools import xgrid, ygrid, seaward_extend, XBeachModelSetup, offshore_depth, \
+from xbTools.general.executing_runs import xb_run_script_win
 plt.style.use(os.path.join('..','xbTools','xb.mplstyle'))
 
 ###############################################################################
