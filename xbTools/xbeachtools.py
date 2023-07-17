@@ -272,7 +272,12 @@ def xgrid(x,z,
     if zdry is None:
         zdry    = wl
 
-    
+    # make sure x is monitonically increasing:
+    if x[0]>x[-1]:
+        x = np.flipud(x)
+        z = np.flipud(z)
+
+
     ## remove nan
     x = x[~np.isnan(z)]
     z = z[~np.isnan(z)]
@@ -372,10 +377,10 @@ def xgrid(x,z,
         ##
         xgr = np.asarray(xgr)
         zgr = np.asarray(zgr)
-        dx  = np.asarray(dx)
-        if (dx<=dxmin).all():
+        if (np.min(dx)<dxmin):
             print('Computed dxmax (= {} m) is smaller than the user defined dxmin (= {} m). Grid will be generated using constant dx = dxmin. Please change dxmin if this is not desired.'.format(dxmax,localmin) )
-       
+            dxmin = np.min(dx)
+
         ## chop off depth profile, if limit is exceeded
         if xlast>xstart:
             zgr[-1] = zstart
@@ -609,6 +614,7 @@ class XBeachModelSetup():
 
         self.friction_layer = None
         self.wavefriction_layer = None
+        self.struct = None
         
     def __repr__(self):
         return self.fname
@@ -655,7 +661,7 @@ class XBeachModelSetup():
         assert(xgr.shape==zgr.shape,'Shape of xgr is not equal to shape of zgr')
         
         ## 1D model
-        if ygr is None or ygr.shape[0]==1:
+        if ygr is None:
             self.ygr = None
             ## make 2d matrix
             if xgr.ndim==1:
@@ -663,7 +669,8 @@ class XBeachModelSetup():
                 self.zgr = zgr[np.newaxis, ...]  
             else:
                 self.xgr = xgr
-                self.zgr = zgr            
+                self.zgr = zgr
+
         ## 2D model
         else:
             self.ygr = ygr
@@ -833,7 +840,7 @@ class XBeachModelSetup():
             f.write('yori\t= {}\n'.format(self.yori).expandtabs(tabnumber))
             f.write('alfa\t= {}\n'.format(self.alfa).expandtabs(tabnumber)) 
             f.write('xfile\t= x.grd\n'.expandtabs(tabnumber))
-            if not self.fast1D:
+            if not self.ygr is None:
                 f.write('yfile\t= y.grd\n'.expandtabs(tabnumber))
             f.write('depfile\t= bed.dep\n'.expandtabs(tabnumber))
             f.write('thetamin\t= {}\n'.format(self.thetamin).expandtabs(tabnumber))
@@ -873,13 +880,14 @@ class XBeachModelSetup():
                     f.write('{} '.format(self.xgr[ii,jj]))
                 f.write('\n')
 
-        if not self.fast1D:
+        if not self.ygr is None:
             ## write grid y
             with open(os.path.join(path,'y.grd'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
                         f.write('{} '.format(self.ygr[ii,jj]))
-                    f.write('\n')                    
+                    f.write('\n')
+
        ## write dep
         with open(os.path.join(path,'bed.dep'),'w') as f:
             for ii in range(self.ny+1):
