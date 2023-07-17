@@ -12,10 +12,9 @@ import math
 from matplotlib.path import Path
 from shapely.geometry import Polygon, Point
 
-def rotate(x, y, theta):
+def rotate(x, y, theta, origin = [0,0]):
     '''
-    rotates the coordinates (x,y) through an angle theta
-    if x,y are matrices, these are first flattened.
+    rotates the coordinates (x,y) counterclockwise through an angle theta around origin
 
     Parameters
     ----------
@@ -25,16 +24,22 @@ def rotate(x, y, theta):
         y-coordinate.
     theta : floatd
         angle in radians.
+    origin: list length 2
+        list of floats [x0, y0] origin coordinate. Default [0, 0]
 
     Returns
     -------
-    rotated arrays x,y  
+    rotated arrays x,y
 
     '''
-    
+    x0, y0 = origin
+    ny, nx = x.shape
+    coords = np.vstack((x.flatten()-x0, y.flatten()-y0))
+
     rotMatrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-    coords = np.vstack((x.flatten(), y.flatten()))
-    return rotMatrix @ coords
+    xrot, yrot = rotMatrix @ coords
+
+    return xrot.reshape(ny, nx)+x0, yrot.reshape(ny, nx)+y0
 
 
 def rotate_grid(xgr, ygr, theta):
@@ -151,18 +156,18 @@ def in_polygon(x,y,poli):
     ip = np.array([poli.contains(p[i]) for i in range(len(p))]).reshape(ny,nx)
     return ip
 
-def rotate(origin, point, angle):
-    """
-    Rotate a point counterclockwise by a given angle around a given origin.
-
-    The angle should be given in radians.
-    """
-    ox, oy = origin
-    px, py = point
-
-    qx = ox + math.cos(angle) * (px - ox) - math.sin(angle) * (py - oy)
-    qy = oy + math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
-    return qx, qy
+# def rotate(origin, point, angle):
+#     """
+#     Rotate a point counterclockwise by a given angle around a given origin.
+#
+#     The angle should be given in radians.
+#     """
+#     ox, oy = origin
+#     px, py = point
+#
+#     qx = ox + math.cos(angle) * (px - ox) - math.sin(angle) * (py - oy)
+#     qy = oy + math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
+#     return qx, qy
    
 def get_points_in_polygon(pol, x_coords, y_coords):
     """
@@ -221,4 +226,29 @@ def get_points_in_polygon(pol, x_coords, y_coords):
     ind_inside[ind_roughly_in] = ind_exactly_inside
     
     return ind_inside
+
+
+def path_distance(polx, poly):
+    '''
+    computes the distance along a polyline
+    ----------
+    polx : TYPE array
+        X COORDINATES.
+    poly : TYPE array
+        Y COORDINATES.
+
+    Returns: TYPE array
+        PATHDISTANCE
+    -------
+    python alternative to matlab function.
+
+    '''
+    dx = np.diff(polx)
+    dy = np.diff(poly)
+
+    dr = np.sqrt(dx ** 2 + dy ** 2)
+
+    pathDistance = np.insert(np.cumsum(dr), 0, 0, axis=0)
+
+    return pathDistance
     
