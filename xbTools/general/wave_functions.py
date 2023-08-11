@@ -133,3 +133,75 @@ def celerity_ratio_equals_09(Tp,d_start):
             break 
     d = d_dummy
     return d
+
+def offshore_depth(Hm0, Tp, depth_offshore_profile, depth_boundary_conditions):
+    '''
+    
+    compute required ofsshore water depth to correctly force the waves
+    Parameters
+    ----------
+    Hm0 : float
+        Wave height.
+    Tp : float
+        Peak period.
+    depth_offshore_profile : float
+        Offshore depth of the profile.
+    depth_boundary_conditions : float
+        Depth of the boundary conditions.
+
+    Returns
+    -------
+    d_start : float
+        Required offshore water depth.
+    slope : float
+        Artificial slope.
+    Hm0_shoal : float
+        Wave height at the boundary.
+
+    '''
+    cg_bc, dummy            = wavecelerity(Tp, depth_boundary_conditions)
+    cg_profile, n_profile   = wavecelerity(Tp, depth_offshore_profile)
+    
+    Hm0_shoal           = Hm0 * np.sqrt(cg_bc/cg_profile)
+    
+    if Hm0_shoal/depth_offshore_profile < 0.3 and n_profile<0.9:
+        slope   = None
+        d_start = depth_offshore_profile
+        print('No extension required')
+        print('Hm0,shoal = {}'.format(Hm0_shoal))
+        print('d start = {}'.format(depth_offshore_profile))
+        print('Hm0,shoal/d = {}'.format(Hm0_shoal/depth_offshore_profile))
+        print('n = {}'.format(n_profile))
+    else:
+        ## compute d_start en Hm0,shoal iterative
+        d_start             = depth_offshore_profile
+        d_start_previous    = 2 * depth_offshore_profile
+        count               = 1
+        d_n                 = celerity_ratio_equals_09(Tp,d_start)
+        while np.abs(d_start-d_start_previous)>0.05:
+            ## update depth
+            d_start_previous = d_start
+            ## compute required depth
+            d_start         = np.max([3.33333*Hm0_shoal, d_n])
+            ## compute hm0 shoal
+            cg, n_startdepth        = wavecelerity(Tp, d_start)
+            Hm0_shoal               = Hm0 * np.sqrt(cg_bc/cg)
+            ## update count
+            count =count+ 1
+            if count>50:
+                print('no convergence')
+                break
+        if Hm0_shoal/depth_offshore_profile>0.3 and n_profile>0.9:
+            slope = 0.02
+            print('Artificial slope of 1:50')
+        else:
+            slope = 0.1
+            print('Artificial slope of 1:10')
+
+        print('Hm0,shoal = {}'.format(Hm0_shoal))
+        print('d start = {}'.format(d_start))
+        print('Hm0,shoal/d profile = {}'.format(Hm0_shoal/depth_offshore_profile))
+        print('Hm0,shoal/d slope = {}'.format(Hm0_shoal/d_start))
+        print('n profile = {}'.format(n_profile))
+        print('n slope = {}'.format(n_startdepth))
+    return d_start, slope, Hm0_shoal

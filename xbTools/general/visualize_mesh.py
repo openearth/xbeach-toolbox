@@ -2,7 +2,7 @@
 """
 Created on Wed May 5 10:04:00 2023
 
-@author: BEMC
+@author: Cas van Bemmelen
 collection that allows for easy mesh plotting and conversion to .shp file for GIS programs
 """
 import os
