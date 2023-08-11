@@ -10,7 +10,7 @@ from matplotlib.ticker import FuncFormatter, IndexLocator
 from scipy.interpolate import interp2d
 import xbTools as xb
 import warnings
-
+import re
 
 class XBeachModelAnalysis():
     '''
@@ -74,6 +74,9 @@ class XBeachModelAnalysis():
             self.unitdict[item] = unitdict[item]
 
     def get_params(self):
+        """
+        reads parameters from params
+        """
 
         #todo: better to read these from the xbeach.log instead of the params.txt
 
@@ -123,8 +126,8 @@ class XBeachModelAnalysis():
         if params['npointvar'] > 0:
             i0 = [i for i, var in enumerate(dat) if 'npoints' in var][0]
             points = dat[i0 + 1:i0 + int(params['npoints'] + 1)]
-            x = [float(t.split(' ')[0]) for t in points]
-            y = [float(t.split(' ')[1]) for t in points]
+            x = [float( re.split('\t| ',t)[0] ) for t in points]
+            y = [float(re.split('\t| ',t)[1] ) for t in points]
             name = [t[2].strip() for t in points]
             params['points'] = dict(zip(name, zip(x, y)))
         else:
@@ -217,17 +220,11 @@ class XBeachModelAnalysis():
 
             
     def load_model_setup(self):
+        self.load_wind()
         self.load_grid()
         self.get_waves()
         self.get_vegetation()
         self.get_tide()
-
-
-
-
-
-
-
 
 
     def load_output_coordinates(self):
