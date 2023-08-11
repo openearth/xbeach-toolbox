@@ -21,6 +21,7 @@ class XBeachModelAnalysis():
         self.fname = fname
         self.model_path = model_path
         self.get_params()
+
         # self.params = None
         self.grd = {}
         self.waves_boundary = {}
@@ -28,8 +29,8 @@ class XBeachModelAnalysis():
         self.tide = {}
         self.wind = {}
         self.var = {}
-        self.long_name = {}
         self.units = {}
+        self.long_name = {}
         self.save_fig = False
         self.plot_localcoords = False
         self.plot_km_coords = False
@@ -69,12 +70,12 @@ class XBeachModelAnalysis():
 
     def set_unitdict(self,unitdict):
         assert type(unitdict) is dict, 'unitdict must be given in dictionary format'
-        self.unitdict = unitdict
+        for item in unitdict:
+            self.unitdict[item] = unitdict[item]
 
     def get_params(self):
-        '''
-        todo: better to read these from the xbeach.log instead of the params.txt
-        '''
+
+        #todo: better to read these from the xbeach.log instead of the params.txt
 
         assert os.path.exists(os.path.join(self.model_path, 'params.txt')), 'missing params.txt'
 
@@ -122,8 +123,8 @@ class XBeachModelAnalysis():
         if params['npointvar'] > 0:
             i0 = [i for i, var in enumerate(dat) if 'npoints' in var][0]
             points = dat[i0 + 1:i0 + int(params['npoints'] + 1)]
-            x = [float(t[0]) for t in points]
-            y = [float(t[1]) for t in points]
+            x = [float(t.split(' ')[0]) for t in points]
+            y = [float(t.split(' ')[1]) for t in points]
             name = [t[2].strip() for t in points]
             params['points'] = dict(zip(name, zip(x, y)))
         else:
@@ -134,48 +135,44 @@ class XBeachModelAnalysis():
     def load_grid(self):
         # only works currently for xbeach type grids (xfile, yfile)
 
-        # read params.txt if this is not done yet
-        if self.params is None:
-            self.get_params()
-
         # load obligatory files
         self.grd['x'] = np.loadtxt(os.path.join(self.model_path, self.params['xfile']))
+        if self.grd['x'].ndim==1:
+            self.grd['x']= self.grd['x'][np.newaxis, ...] 
+
         assert self.grd['x'].shape == (self.params['ny']+1, self.params['nx']+1), 'x grid not of correct size'
 
         self.grd['z'] = np.loadtxt(os.path.join(self.model_path, self.params['depfile']))
+        if self.grd['z'].ndim==1:
+            self.grd['z']= self.grd['z'][np.newaxis, ...] 
         assert self.grd['z'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'z grid not of correct size'
+        ## set posdwn
         if 'posdwn' in self.params:
             if int(self.params['posdwn']) == 1:
                 self.grd['z'] = -1*self.grd['z']
 
-        # read optional files
+        # read y
         if self.params['ny'] > 0:
             self.grd['y'] = np.loadtxt(os.path.join(self.model_path, self.params['yfile']))
             assert self.grd['y'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'y grid not of correct size'
-
-        if int(self.params['struct']) == 1:
+        # struct
+        if 'struct' in self.params == 1:
             self.grd['ne'] = np.loadtxt(os.path.join(self.model_path, self.params['ne_layer']))
             assert self.grd['ne'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'ne grid not of correct size'
 
     def get_waves(self):
-        # read params.txt if this is not done yet
-        if self.params is None:
-            self.get_params()
 
         # waves boundary
         if self.params['wbctype'] == 'jonstable':
             dat = np.loadtxt(os.path.join(self.model_path, self.params['bcfile']))
-
             assert dat.shape[1] == 7, \
                 'columns of jonstable should exactly be: Hm0, Tp, mainang, gammajsp, s, duration, dtbc'
-
             self.waves_boundary['Hm0'] = dat[:, 0]
             self.waves_boundary['Tp'] = dat[:, 1]
             self.waves_boundary['mainang'] = dat[:, 2]
             self.waves_boundary['gammajsp'] = dat[:, 3]
             self.waves_boundary['s'] = dat[:, 4]
             self.waves_boundary['time'] = np.cumsum(dat[:, 5])
-
         elif self.params['wbctype'] == 'jons':
             print('not yet written')
             pass
@@ -185,54 +182,53 @@ class XBeachModelAnalysis():
             self.waves_boundary['mainang'] = float( self.params['dir0'])
             self.waves_boundary['s'] = float(self.params['m']/2)
         else:
-            print('not yet written')
+            print('not possible')
             pass
 
     def get_vegetation(self):
         pass
 
     def get_tide(self):
-        if self.params is None:
-            self.get_params()
 
-        dat = np.loadtxt(os.path.join(self.model_path, self.params['zs0file']))
 
-        if int(self.params['tideloc']) == 1:
-            assert dat.shape[1] == 2, 'tideloc=1, expected 2 cols'
-        if int(self.params['tideloc']) == 2:
-            assert dat.shape[1] == 3, 'tideloc=2, expected 3 cols'
-        if int(self.params['tideloc']) == 4:
-            assert dat.shape[1] == 5, 'tideloc=1, expected 5 cols'
+        if 'zs0file' in self.params:
+            dat = np.loadtxt(os.path.join(self.model_path, self.params['zs0file']))
 
-        self.tide['time'] = dat[:, 0]
-        self.tide['zs0'] = dat[:, 1:]
-        self.tide['tideloc'] = self.params['tideloc']
-        if 'paulrevere' in self.params:
-            self.tide['paulrevere'] = self.params['paulrevere']
+            if int(self.params['tideloc']) == 1:
+                assert dat.shape[1] == 2, 'tideloc=1, expected 2 cols'
+            if int(self.params['tideloc']) == 2:
+                assert dat.shape[1] == 3, 'tideloc=2, expected 3 cols'
+            if int(self.params['tideloc']) == 4:
+                assert dat.shape[1] == 5, 'tideloc=1, expected 5 cols'
+
+            self.tide['time'] = dat[:, 0]
+            self.tide['zs0'] = dat[:, 1:]
+            self.tide['tideloc'] = self.params['tideloc']
+            if 'paulrevere' in self.params:
+                self.tide['paulrevere'] = self.params['paulrevere']
 
     def get_wind(self):
-        if self.params is None:
-            self.get_params()
+        if 'wind' in self.params:   
+            dat = np.loadtxt(os.path.join(self.model_path, self.params['windfile']))
 
-        if self.params['wind'] != 1:
-            print('no wind forcing was imposed')
-            return
-        
-            
-            
-        dat = np.loadtxt(os.path.join(self.model_path, self.params['windfile']))
-
-        self.wind['time'] = dat[:, 0]
-        self.wind['u10'] = dat[:, 1]
-        self.wind['u10dir'] = dat[:, 2]
+            self.wind['time'] = dat[:, 0]
+            self.wind['u10'] = dat[:, 1]
+            self.wind['u10dir'] = dat[:, 2]
 
             
     def load_model_setup(self):
-        self.get_params()
         self.load_grid()
         self.get_waves()
         self.get_vegetation()
         self.get_tide()
+
+
+
+
+
+
+
+
 
     def load_output_coordinates(self):
 
@@ -331,15 +327,16 @@ class XBeachModelAnalysis():
             self.var['localx'] = self.var['localx']/1e3
             self.var['localy'] = self.var['localy']/1e3
 
-        # point output coordinates in local coordinates
-        self.var['station_x_local'] = []
-        self.var['station_y_local'] = []
-        for sx, sy in zip(self.var['station_x'], self.var['station_y']):
-            iy, ix = np.unravel_index(((self.var['globalx'][:] - sx) ** 2 + \
-                                       (self.var['globaly'][:] - sy) ** 2).argmin(),
-                                      [int(self.params['ny'] + 1), int(self.params['nx'] + 1)])
-            self.var['station_x_local'].append(self.var['localx'][iy, ix])
-            self.var['station_y_local'].append(self.var['localy'][iy, ix])
+        if self.params['npointvar'] > 0: 
+            # point output coordinates in local coordinates
+            self.var['station_x_local'] = []
+            self.var['station_y_local'] = []
+            for sx, sy in zip(self.var['station_x'], self.var['station_y']):
+                iy, ix = np.unravel_index(((self.var['globalx'][:] - sx) ** 2 + \
+                                        (self.var['globaly'][:] - sy) ** 2).argmin(),
+                                        [int(self.params['ny'] + 1), int(self.params['nx'] + 1)])
+                self.var['station_x_local'].append(self.var['localx'][iy, ix])
+                self.var['station_y_local'].append(self.var['localy'][iy, ix])
 
         return
 
@@ -370,9 +367,9 @@ class XBeachModelAnalysis():
         #mean and point output might not be availble if the eor is not reached. Therefore cut
         if 'point_' in var and len(np.atleast_1d(dat.mask)) > 1:
             dat = dat[~dat.mask[:, 0], :]
-        elif len(dat.shape) == 3 and '_mean' in var and len(np.atleast_1d(dat.mask)) > 1:
+        elif dat.ndim == 3 and '_mean' in var and len(np.atleast_1d(dat.mask)) > 1:
             dat = dat[~dat.mask[:, 0, 0], :, :]
-        elif len(dat.shape) == 2 and '_mean' in var and len(np.atleast_1d(dat.mask)) > 1:
+        elif dat.ndim == 2 and '_mean' in var and len(np.atleast_1d(dat.mask)) > 1:
             # 1D case
             pass
 
@@ -420,6 +417,7 @@ class XBeachModelAnalysis():
 
         return self.var['pointtime'][:Nt-1], self.var[var][:Nt-1, index]
 
+
     def _mdates_concise_subplot_axes(self, ax):
         major_locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
         formatter = mdates.ConciseDateFormatter(major_locator)
@@ -433,7 +431,7 @@ class XBeachModelAnalysis():
     def fig_check_tide_bc(self):
 
         assert len(self.AOI) == 0, 'can only check the tide if zs0 is loaded on the entire model domain, so without AOI'
-
+        assert 'zs0file' in self.params, 'No tidal signal available'
 
         # get model output
         self.load_modeloutput('zs')
@@ -496,6 +494,10 @@ class XBeachModelAnalysis():
         if self.save_fig:
             plt.savefig(os.path.join(self.model_path, 'fig', 'wl_bc_check.png'), dpi=200)
         return fig, ax
+    
+
+
+
 
     def _fig_map_var(self, dat, label, figsize=None, **kwargs):
 
