@@ -456,7 +456,7 @@ class XBeachModelSetup():
             plt.title('Local coordinates')
             plt.subplot(2,1,2)
             [X_world,Y_world] = rotate_grid(self.xgr,self.ygr,np.deg2rad(self.alfa))
-            plt.pcolor(X_world,Y_world,self.zgr*self.posdwn)
+            plt.pcolor(X_world+self.xori,Y_world+self.yori,self.zgr*self.posdwn)
             plt.xlabel('x')
             plt.ylabel('y')
             plt.axis('equal')
