@@ -7,6 +7,11 @@ collection that contains refinement functions for regular meshes
 module contains:
     - grid_refine_grid
 """
+# general import
+import numpy as np
+
+# toolbox specific import
+from ..general.geometry import rotate_grid
 
 def grid_refine_grid(xgr,ygr,xfactor = 2, yfactor = 1):
     '''
@@ -17,6 +22,7 @@ def grid_refine_grid(xgr,ygr,xfactor = 2, yfactor = 1):
     
     Author: Marlies van der Lugt
     Revision 0 
+    # todo: add better docstring and syntax
     '''    
     #rotation of the grid
     alpha = np.arctan2(ygr[0,-1]-ygr[0,0],xgr[0,-1]-xgr[0,0])
