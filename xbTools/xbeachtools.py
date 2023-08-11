@@ -1,11 +1,20 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Aug 11 14:10:02 2023
+
+@author: Menno de Ridder, Cas van Bemmelen
+main collection for the setup of XBeach models
+module contains class to setup 1D and 2D XBeach models based on user input
+
+"""
+# general imports
 import numpy as np
 import os
 from datetime import datetime
 import json
 import matplotlib.pyplot as plt
-from shapely.geometry import Point
 
-from .general.wave_functions import dispersion, wavecelerity, celerity_ratio_equals_09
+# toolbox specific import
 from .general.geometry import rotate_grid
     
 class XBeachModelSetup():
@@ -26,10 +35,19 @@ class XBeachModelSetup():
         self.struct = None
         
     def __repr__(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """        
         return self.fname
     
     def set_params(self,input_par_dict):
-        
+        """_summary_
+
+        Args:
+            input_par_dict (_type_): _description_
+        """        
         ## set wavemodel. Default is Surfbeat
         if 'Wavemodel' not in input_par_dict:
             print('No wavemodel defined. Wavemodel is set to Surfbeat')
@@ -65,7 +83,21 @@ class XBeachModelSetup():
                 self.input_par['par'][input_par] = input_par_dict[input_par]
             
     def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0,alfa=0, thetamin=-90, thetamax = 90, dtheta=10, dtheta_s=10):
-        
+        """_summary_
+
+        Args:
+            xgr (_type_): _description_
+            ygr (_type_): _description_
+            zgr (_type_): _description_
+            posdwn (int, optional): _description_. Defaults to 1.
+            xori (int, optional): _description_. Defaults to 0.
+            yori (int, optional): _description_. Defaults to 0.
+            alfa (int, optional): _description_. Defaults to 0.
+            thetamin (int, optional): _description_. Defaults to -90.
+            thetamax (int, optional): _description_. Defaults to 90.
+            dtheta (int, optional): _description_. Defaults to 10.
+            dtheta_s (int, optional): _description_. Defaults to 10.
+        """        
         ##
         assert(xgr.shape==zgr.shape,'Shape of xgr is not equal to shape of zgr')
         
@@ -125,6 +157,7 @@ class XBeachModelSetup():
         '''
         self.nebed = nebed
         self.struct = struct
+
     def set_friction(self, friction, friction_layer = 1):      
         '''
         function to set friction layer for the xbeach model
@@ -160,6 +193,12 @@ class XBeachModelSetup():
         self.wavefriction_layer = wavefriction_layer
 
     def set_waves(self,wbctype, input_struct):
+        """_summary_
+
+        Args:
+            wbctype (_type_): _description_
+            input_struct (_type_): _description_
+        """        
         self.wbctype = wbctype
         ##
         if wbctype=='jonstable':
@@ -175,16 +214,31 @@ class XBeachModelSetup():
             self.waves_boundary[item] =  input_struct[item]
             
     def set_vegetation(self):
+        """_summary_
+        """        
         pass
 
     def set_tide(self):
+        """_summary_
+        """        
         pass
         
     def load_model_setup(self,path):
+        """_summary_
+
+        Args:
+            path (_type_): _description_
+        """        
         ## todo
         pass    
 
     def write_model(self, path, figure=True):
+        """_summary_
+
+        Args:
+            path (_type_): _description_
+            figure (bool, optional): _description_. Defaults to True.
+        """        
         self.model_path = path
         path_params = os.path.join(path,'params.txt')
         
