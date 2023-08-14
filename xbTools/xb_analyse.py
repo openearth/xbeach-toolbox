@@ -220,7 +220,7 @@ class XBeachModelAnalysis():
 
             
     def load_model_setup(self):
-        self.load_wind()
+        #self.load_wind()
         self.load_grid()
         self.get_waves()
         self.get_vegetation()
@@ -555,9 +555,9 @@ class XBeachModelAnalysis():
         fig, ax = self._fig_map_var(data, label, figsize, **kwargs)
 
         if self.globalstarttime is None:
-            ax.set_title('t = {:.1f}Hr'.format(self.var['globaltime'][it] ))
+            ax.set_title(var+' - t = {:.1f}Hr'.format(self.var['globaltime'][it] ))
         else:
-            ax.set_title('t = {}'.format(self.var['globaltime'][it]))
+            ax.set_title(var+' - t = {}'.format(self.var['globaltime'][it]))
         if self.save_fig:
             folder = os.path.join(self.model_path, 'fig', 'map_{}'.format(var[0]))
             if not os.path.exists(folder):
@@ -666,13 +666,14 @@ class XBeachModelAnalysis():
         cross = self.var['cross']  # because we are sure that after getting the above three variables this one is initialized
 
         # only load the ne layer if one is in place
-        if int(self.params['struct']) == 1:
-            self.load_grid()
-            if len(self.AOI) > 0:
-                ne = self.grd['ne'][self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
-            else:
-                ne = self.grd['ne']
-            ne = zb[0, :, :]-ne
+        if 'struct' in self.params: # check if struct is in params
+            if int(self.params['struct']) == 1:
+                self.load_grid()
+                if len(self.AOI) > 0:
+                    ne = self.grd['ne'][self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+                else:
+                    ne = self.grd['ne']
+                ne = zb[0, :, :]-ne
 
         fig, ax = plt.subplots()
         plt.plot(cross, np.nanmax(zs, axis=0)[iy, :], color='blue', label='zs-max')
@@ -680,9 +681,10 @@ class XBeachModelAnalysis():
         plt.plot(cross, zb[0, iy, :], color='k', label='pre')
         plt.plot(cross, zb[-1, iy, :], color='r', label='post')
 
-        if int(self.params['struct']) == 1:
-            plt.fill_between(cross, zb[0, iy, :], ne[iy, :], color='lightgrey', label='erodible')
-            plt.fill_between(cross, ne[iy, :], -25, color='grey', label='non-erodible')
+        if 'struct' in self.params: # check if struct is in params
+            if int(self.params['struct']) == 1:
+                plt.fill_between(cross, zb[0, iy, :], ne[iy, :], color='lightgrey', label='erodible')
+                plt.fill_between(cross, ne[iy, :], -25, color='grey', label='non-erodible')
         else:
             plt.fill_between(cross, zb[0, iy, :], -25, color='lightgrey', label='erodible')
 
