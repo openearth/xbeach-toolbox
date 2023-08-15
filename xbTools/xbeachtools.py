@@ -297,6 +297,7 @@ class XBeachModelSetup():
             f.write('%% Grid \n')
             f.write('\n')
             f.write('vardx\t= {}\n'.format(self.vardx).expandtabs(tabnumber))
+            f.write('posdwn\t={}\n'.format(self.posdwn).expandtabs(tabnumber))
             f.write('nx\t= {}\n'.format(self.nx).expandtabs(tabnumber))
             f.write('ny\t= {}\n'.format(self.ny).expandtabs(tabnumber))
             f.write('xori\t= {}\n'.format(self.xori).expandtabs(tabnumber))
