@@ -9,7 +9,6 @@ XBeach Python toolbox
 .. toctree::
    introduction
    functions
-   xbeach-1D
 
 
 
