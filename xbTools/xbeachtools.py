@@ -14,8 +14,7 @@ from datetime import datetime
 import json
 import matplotlib.pyplot as plt
 
-# toolbox specific import
-from .general.geometry import rotate_grid
+
     
 class XBeachModelSetup():
     '''

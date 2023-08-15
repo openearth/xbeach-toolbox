@@ -20,7 +20,7 @@ xb_analyse
 
 .. _sec_general:
 General
-----------
+--------
 
 Wave Functions
 ~~~~~~~~~~~~~~~~~~~~
