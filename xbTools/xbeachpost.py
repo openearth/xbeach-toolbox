@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Aug 11 14:10:02 2023
+
+@author: MarliesA
+main collection for the postprocessing of XBeach models
+module contains class for analysis of 2D XBeach models 
+note that output and input must be available in directory
+"""
 import numpy as np
 import os
 import netCDF4 as nc
@@ -18,9 +27,16 @@ class XBeachModelAnalysis():
     '''
 
     def __init__(self, fname, model_path):
+        """_summary_
+
+        Args:
+            fname (_type_): _description_
+            model_path (_type_): _description_
+        """        
         self.fname = fname
         self.model_path = model_path
         self.get_params()
+        self.get_metadata()
 
         # self.params = None
         self.grd = {}
@@ -39,10 +55,33 @@ class XBeachModelAnalysis():
         self.unitdict = {'Hm0': ' [m]', 'H': ' [m]', 'zs': ' [m+NAP]', 'u': ' [m/s]', 'v': ' [m/s]',
                          'zb': ' [m]', 'thetamean': ' [deg]', 'beta': '[-]'}
 
+    def get_metadata(self):
+        '''
+        function to print metadata from XBlog.txt
+        '''
+        with open(self.model_path+'\\XBlog.txt') as file:
+        # setup meta dictionary
+            meta_dictionary = {}
+            # loop over all lines in file
+            for line in file.readlines():
+                if '=' in line: # check if = is in line
+                    key, value = line.split('=') # plit on '='
+                    meta_dictionary[key.replace(" ", "")] = value[:-1] 
+                    # .replace(" ", "") to remove trailing and leading spaces in key
+                    # [:-1] used to remove trailing /n
+                if 'Finished reading input parameters' in line: # notice finished readline line, then break
+                    break
+        self.metadata = meta_dictionary # store to class
+
     def __repr__(self):
         return self.fname
 
     def set_save_fig(self, yesno):
+        """_summary_
+
+        Args:
+            yesno (_type_): _description_
+        """        
         assert type(yesno) is bool, 'input type must be bool'
         self.save_fig = yesno
         plotdir = os.path.join(self.model_path, 'fig')
@@ -50,25 +89,50 @@ class XBeachModelAnalysis():
             os.mkdir(plotdir)
 
     def set_plot_localcoords(self, yesno):
+        """_summary_
+
+        Args:
+            yesno (_type_): _description_
+        """        
         assert type(yesno) is bool, 'input type must be bool'
         self.plot_localcoords = yesno
         self.plot_km_coords = False
         self.load_output_coordinates()
 
     def set_plot_km_coords(self, yesno):
+        """_summary_
+
+        Args:
+            yesno (_type_): _description_
+        """        
         assert type(yesno) is bool, 'input type must be bool'
         self.plot_km_coords = yesno
         self.load_output_coordinates()
 
     def set_aoi(self, AOI):
+        """_summary_
+
+        Args:
+            AOI (_type_): _description_
+        """        
         self.var = {}  # drop variables from memory because they need to be reloaded with appropriate AOI
         self.AOI = AOI
 
     def set_globalstarttime(self, tstart):
+        """_summary_
+
+        Args:
+            tstart (_type_): _description_
+        """        
         assert type(tstart) is str, 'tstart must be given as a string of the format 2021-10-11T13:00:00'
         self.globalstarttime = np.datetime64(tstart)
 
     def set_unitdict(self,unitdict):
+        """_summary_
+
+        Args:
+            unitdict (_type_): _description_
+        """        
         assert type(unitdict) is dict, 'unitdict must be given in dictionary format'
         for item in unitdict:
             self.unitdict[item] = unitdict[item]
@@ -136,6 +200,8 @@ class XBeachModelAnalysis():
         self.params = params
 
     def load_grid(self):
+        """_summary_
+        """        
         # only works currently for xbeach type grids (xfile, yfile)
 
         # load obligatory files
@@ -164,7 +230,8 @@ class XBeachModelAnalysis():
             assert self.grd['ne'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'ne grid not of correct size'
 
     def get_waves(self):
-
+        """_summary_
+        """
         # waves boundary
         if self.params['wbctype'] == 'jonstable':
             dat = np.loadtxt(os.path.join(self.model_path, self.params['bcfile']))
@@ -189,11 +256,13 @@ class XBeachModelAnalysis():
             pass
 
     def get_vegetation(self):
+        """_summary_
+        """        
         pass
 
     def get_tide(self):
-
-
+        """_summary_
+        """
         if 'zs0file' in self.params:
             dat = np.loadtxt(os.path.join(self.model_path, self.params['zs0file']))
 
@@ -211,6 +280,8 @@ class XBeachModelAnalysis():
                 self.tide['paulrevere'] = self.params['paulrevere']
 
     def get_wind(self):
+        """_summary_
+        """        
         if 'wind' in self.params:   
             dat = np.loadtxt(os.path.join(self.model_path, self.params['windfile']))
 
@@ -220,7 +291,9 @@ class XBeachModelAnalysis():
 
             
     def load_model_setup(self):
-        self.load_wind()
+        """_summary_
+        """        
+        #self.load_wind()
         self.load_grid()
         self.get_waves()
         self.get_vegetation()
@@ -228,7 +301,11 @@ class XBeachModelAnalysis():
 
 
     def load_output_coordinates(self):
+        """_summary_
 
+        Returns:
+            _type_: _description_
+        """
         ds = nc.Dataset(os.path.join(self.model_path, 'xboutput.nc'))
 
         # grid
@@ -338,6 +415,11 @@ class XBeachModelAnalysis():
         return
 
     def load_modeloutput(self, var):
+        """_summary_
+
+        Args:
+            var (_type_): _description_
+        """        
         if var in self.var:
             return
 
@@ -393,11 +475,27 @@ class XBeachModelAnalysis():
         self.units[var] = ds.variables[var].units
 
     def get_modeloutput(self, var):
+        """_summary_
+
+        Args:
+            var (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """        
         self.load_modeloutput(var)
         return self.var[var]
 
     def get_modeloutput_by_station(self, var, station):
+        """_summary_
 
+        Args:
+            var (_type_): _description_
+            station (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         if len(self.var) == 0:
             self.load_output_coordinates()
 
@@ -416,6 +514,11 @@ class XBeachModelAnalysis():
 
 
     def _mdates_concise_subplot_axes(self, ax):
+        """_summary_
+
+        Args:
+            ax (_type_): _description_
+        """        
         major_locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
         formatter = mdates.ConciseDateFormatter(major_locator)
         # see whether we can iterate through ax, if not than cast in list so we can
@@ -426,6 +529,11 @@ class XBeachModelAnalysis():
 
 
     def fig_check_tide_bc(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """        
 
         assert len(self.AOI) == 0, 'can only check the tide if zs0 is loaded on the entire model domain, so without AOI'
         assert 'zs0file' in self.params, 'No tidal signal available'
@@ -433,8 +541,6 @@ class XBeachModelAnalysis():
         # get model output
         self.load_modeloutput('zs')
         zs = self.var['zs']
-
-
 
         # get model input
         if self.tide == {}:
@@ -492,11 +598,17 @@ class XBeachModelAnalysis():
             plt.savefig(os.path.join(self.model_path, 'fig', 'wl_bc_check.png'), dpi=200)
         return fig, ax
     
-
-
-
-
     def _fig_map_var(self, dat, label, figsize=None, **kwargs):
+        """_summary_
+
+        Args:
+            dat (_type_): _description_
+            label (_type_): _description_
+            figsize (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """        
 
         if self.plot_localcoords:
             x = self.var['localx']
@@ -544,7 +656,17 @@ class XBeachModelAnalysis():
         return fig, ax
 
     def fig_map_var(self, var, label, it=np.inf, figsize=None, **kwargs):
+        """_summary_
 
+        Args:
+            var (_type_): _description_
+            label (_type_): _description_
+            it (_type_, optional): _description_. Defaults to np.inf.
+            figsize (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
         self.load_modeloutput(var)
 
         if np.isinf(it):
@@ -555,9 +677,9 @@ class XBeachModelAnalysis():
         fig, ax = self._fig_map_var(data, label, figsize, **kwargs)
 
         if self.globalstarttime is None:
-            ax.set_title('t = {:.1f}Hr'.format(self.var['globaltime'][it] ))
+            ax.set_title(var+' - t = {:.1f}Hr'.format(self.var['globaltime'][it] ))
         else:
-            ax.set_title('t = {}'.format(self.var['globaltime'][it]))
+            ax.set_title(var+' - t = {}'.format(self.var['globaltime'][it]))
         if self.save_fig:
             folder = os.path.join(self.model_path, 'fig', 'map_{}'.format(var[0]))
             if not os.path.exists(folder):
@@ -569,6 +691,19 @@ class XBeachModelAnalysis():
         return fig, ax
 
     def fig_map_diffvar(self, var, label, it0=0, itend=np.inf, clim=None, figsize=None, **kwargs):
+        """_summary_
+
+        Args:
+            var (_type_): _description_
+            label (_type_): _description_
+            it0 (int, optional): _description_. Defaults to 0.
+            itend (_type_, optional): _description_. Defaults to np.inf.
+            clim (_type_, optional): _description_. Defaults to None.
+            figsize (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """        
         assert itend > it0, 'itend must be larger than it0'
         assert it0 >= 0, 'it0 should be >= 0'
 
@@ -603,6 +738,19 @@ class XBeachModelAnalysis():
         return fig, ax
 
     def fig_cross_var(self,var, it, iy=None, coord=None, plot_ref_bathy=True, zmin=-25):
+        """_summary_
+
+        Args:
+            var (_type_): _description_
+            it (_type_): _description_
+            iy (_type_, optional): _description_. Defaults to None.
+            coord (_type_, optional): _description_. Defaults to None.
+            plot_ref_bathy (bool, optional): _description_. Defaults to True.
+            zmin (int, optional): _description_. Defaults to -25.
+
+        Returns:
+            _type_: _description_
+        """        
         assert not ((iy is None) & (coord is None)), 'specify either an alongshore index iy or a coordinate coord'
 
         try:
@@ -658,6 +806,15 @@ class XBeachModelAnalysis():
         return fig, ax
 
     def fig_profile_change(self, iy=None, coord=None):
+        """_summary_
+
+        Args:
+            iy (_type_, optional): _description_. Defaults to None.
+            coord (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """        
         if iy is None:
             assert coord is not None, 'if no iy index is specified, a coordinate needs to be specified (xi,yi)'
 
@@ -666,13 +823,14 @@ class XBeachModelAnalysis():
         cross = self.var['cross']  # because we are sure that after getting the above three variables this one is initialized
 
         # only load the ne layer if one is in place
-        if int(self.params['struct']) == 1:
-            self.load_grid()
-            if len(self.AOI) > 0:
-                ne = self.grd['ne'][self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
-            else:
-                ne = self.grd['ne']
-            ne = zb[0, :, :]-ne
+        if 'struct' in self.params: # check if struct is in params
+            if int(self.params['struct']) == 1:
+                self.load_grid()
+                if len(self.AOI) > 0:
+                    ne = self.grd['ne'][self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
+                else:
+                    ne = self.grd['ne']
+                ne = zb[0, :, :]-ne
 
         fig, ax = plt.subplots()
         plt.plot(cross, np.nanmax(zs, axis=0)[iy, :], color='blue', label='zs-max')
@@ -680,9 +838,10 @@ class XBeachModelAnalysis():
         plt.plot(cross, zb[0, iy, :], color='k', label='pre')
         plt.plot(cross, zb[-1, iy, :], color='r', label='post')
 
-        if int(self.params['struct']) == 1:
-            plt.fill_between(cross, zb[0, iy, :], ne[iy, :], color='lightgrey', label='erodible')
-            plt.fill_between(cross, ne[iy, :], -25, color='grey', label='non-erodible')
+        if 'struct' in self.params: # check if struct is in params
+            if int(self.params['struct']) == 1:
+                plt.fill_between(cross, zb[0, iy, :], ne[iy, :], color='lightgrey', label='erodible')
+                plt.fill_between(cross, ne[iy, :], -25, color='grey', label='non-erodible')
         else:
             plt.fill_between(cross, zb[0, iy, :], -25, color='lightgrey', label='erodible')
 
@@ -701,10 +860,23 @@ class XBeachModelAnalysis():
 
     def fig_map_quiver(self, var=['ue', 've'], label='ue [m/s]', it=np.inf, streamspacing=50,
                        figsize=None, vmax=None, vmin=None, ifrac = 0, **kwargs):
-        '''
-        plots map plots of map output, only works for rectilinear grids (that can be of varying grid resolution).
+        """plots map plots of map output, only works for rectilinear grids (that can be of varying grid resolution).
         Does not work for curvilinear grids!
-        '''
+
+        Args:
+            var (list, optional): _description_. Defaults to ['ue', 've'].
+            label (str, optional): _description_. Defaults to 'ue [m/s]'.
+            it (_type_, optional): _description_. Defaults to np.inf.
+            streamspacing (int, optional): _description_. Defaults to 50.
+            figsize (_type_, optional): _description_. Defaults to None.
+            vmax (_type_, optional): _description_. Defaults to None.
+            vmin (_type_, optional): _description_. Defaults to None.
+            ifrac (int, optional): _description_. Defaults to 0.
+
+        Returns:
+            _type_: _description_
+        """        
+
         warnings.filterwarnings("ignore", category=RuntimeWarning)
 
         ja_plot_localcoords = self.plot_localcoords

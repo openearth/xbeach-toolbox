@@ -98,7 +98,7 @@ class XBeachModelSetup():
             dtheta_s (int, optional): _description_. Defaults to 10.
         """        
         ##
-        assert(xgr.shape==zgr.shape,'Shape of xgr is not equal to shape of zgr')
+        assert xgr.shape==zgr.shape, 'Shape of xgr is not equal to shape of zgr'
         
         ## 1D model
         if ygr is None:
@@ -296,6 +296,7 @@ class XBeachModelSetup():
             f.write('%% Grid \n')
             f.write('\n')
             f.write('vardx\t= {}\n'.format(self.vardx).expandtabs(tabnumber))
+            f.write('posdwn\t={}\n'.format(self.posdwn).expandtabs(tabnumber))
             f.write('nx\t= {}\n'.format(self.nx).expandtabs(tabnumber))
             f.write('ny\t= {}\n'.format(self.ny).expandtabs(tabnumber))
             f.write('xori\t= {}\n'.format(self.xori).expandtabs(tabnumber))
