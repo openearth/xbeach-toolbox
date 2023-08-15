@@ -1,5 +1,9 @@
 @ECHO OFF
 
+
+copy ..\notebooks\xbeach-2D.ipynb source\xbeach-2D.ipynb
+copy ..\notebooks\xbeach-1D.ipynb source\xbeach-1D.ipynb
+
 pushd %~dp0
 
 REM Command file for Sphinx documentation

@@ -1,5 +1,7 @@
 # Minimal makefile for Sphinx documentation
 #
+cp ../notebooks/xbeach-2D.ipynb source/xbeach-2D.ipynb
+cp ../notebooks/xbeach-1D.ipynb source/xbeach-1D.ipynb
 
 # You can set these variables from the command line, and also
 # from the environment for the first two.
