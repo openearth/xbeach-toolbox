@@ -3,8 +3,11 @@ Welcome to the xbeach-toolbox!
 This package contains a set of general tools to setup and postprocess 1D and 2D XBeach models.
 The tools have been written in Python, please see the sections below for further instructions.
 
+Information about this package and its contents can also be viewed on: https://xbeach-toolbox.readthedocs.io/en/latest/
+Information about the use of the XBeach model itself can be found on: https://xbeach.readthedocs.io/en/latest/.
+
 # Getting started / installation
-Pypi release
+Pip packages are hosted on the pypi server and can be installed as usual. 
 
 # Release notes
 Release  | notes 
