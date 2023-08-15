@@ -99,7 +99,7 @@ class XBeachModelSetup():
             dtheta_s (int, optional): _description_. Defaults to 10.
         """        
         ##
-        assert(xgr.shape==zgr.shape,'Shape of xgr is not equal to shape of zgr')
+        assert xgr.shape==zgr.shape, 'Shape of xgr is not equal to shape of zgr'
         
         ## 1D model
         if ygr is None:
