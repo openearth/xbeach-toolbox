@@ -20,6 +20,7 @@ Release  | notes
 
 # Usage / examples
 Basic examples have been added to the examples folder in the project.
+
 For both a 1D and 2D simulation these python notebooks show how the tools can be used to setup a model.
 
 # Contributing
