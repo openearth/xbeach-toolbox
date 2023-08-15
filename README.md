@@ -19,9 +19,6 @@ For both a 1D and 2D simulation these python notebooks show how the tools can be
 # Contributing
 fork, issue, branch, commit, review, approve, merge
 
-# License
--
-
 # Contact
 Menno de Ridder - menno.deridder@deltares.nl
 
