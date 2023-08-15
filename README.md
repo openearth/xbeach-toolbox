@@ -22,4 +22,4 @@ fork, issue, branch, commit, review, approve, merge
 # Contact
 Menno de Ridder - menno.deridder@deltares.nl
 
-Cas van Bemmelen - cas.van.benmmelen@witteveenbos.com
+Cas van Bemmelen - cas.van.bemmelen@witteveenbos.com
