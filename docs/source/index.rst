@@ -8,10 +8,10 @@ XBeach Python toolbox
 
 .. toctree::
    introduction
-   functions
    xbeach-setup-1D
    xbeach-setup-2D
    xbeach-post-2D
+   functions
 
 
 

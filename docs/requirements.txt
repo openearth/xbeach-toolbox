@@ -11,3 +11,4 @@ pandoc==2.3
 nbsphinx==0.9.2
 Sphinx==5.0.2
 sphinx-rtd-theme==1.2.2
+pydata-sphinx-theme==0.13.3
