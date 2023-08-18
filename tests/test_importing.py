@@ -1,1 +1,1 @@
-from xbTools import xbeachtools, xbeachpost
+from xbTools import xbeachtools
