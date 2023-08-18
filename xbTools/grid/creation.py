@@ -226,10 +226,8 @@ def ygrid(y,
 
     Returns
     -------
-    ygr : TYPE
-        DESCRIPTION.
-
-    #todo improve docstring and syntax of code
+    ygr : array
+        array with y grid.
     '''
     
     retry = False

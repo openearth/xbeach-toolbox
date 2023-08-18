@@ -19,7 +19,7 @@ def dispersion(w, d, max_error=0.00001,g=9.81):
     max_error : float, optional
         maximum error. The default is 0.00001.
     g : float, optional
-        gravitational acceleration
+        gravitational acceleration.
 
     Returns
     -------
@@ -49,7 +49,7 @@ def dispersion(w, d, max_error=0.00001,g=9.81):
 
 def wavecelerity(Tp, d, g=9.81):
     '''
-    Computes the group velocity and wave celerity ratio based on the period and water depth
+    Computes the group velocity and wave celerity ratio based on the wave period and water depth.
 
     Parameters
     ----------
@@ -77,21 +77,21 @@ def wavecelerity(Tp, d, g=9.81):
 
 def directional_spread_kuik(theta,ee):
     '''
-    determine mean wave direction and directional spreading, Kuik et al. 1988
+    Determine mean wave direction and directional spreading, Kuik et al. 1988
     see SWAN user manual for definitions
     theta0 and dspr only for range [fmin,fmax]
 
     Parameters
     ----------
     theta : array
-        DESCRIPTION.
+        Array with the directions.
     ee : TYPE
-        DESCRIPTION.
+        Array with the energy density.
 
     Returns
     -------
-    TYPE
-        directional spreading in degrees.
+    float
+        Directional spreading in degrees.
 
     '''
 
@@ -106,19 +106,19 @@ def directional_spread_kuik(theta,ee):
 
 def celerity_ratio_equals_09(Tp,d_start):
     '''
-    function to find water depth for which the n ration equal 0.9
+    Function to find water depth for which the n ration equal 0.9.
 
     Parameters
     ----------
     Tp : float
-        peak period.
+        Peak period.
     d_start : float
         Water depth.
 
     Returns
     -------
     d : float
-        depth.
+        Depth.
 
     '''
     d_dummy     = d_start
@@ -137,7 +137,8 @@ def celerity_ratio_equals_09(Tp,d_start):
 def offshore_depth(Hm0, Tp, depth_offshore_profile, depth_boundary_conditions):
     '''
     
-    compute required ofsshore water depth to correctly force the waves
+    Compute required Offshore water depth to correctly force the waves
+    
     Parameters
     ----------
     Hm0 : float

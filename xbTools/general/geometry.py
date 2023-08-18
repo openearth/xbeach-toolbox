@@ -14,7 +14,7 @@ from shapely.geometry import Polygon, Point
 
 def rotate(x, y, theta, origin = [0,0]):
     '''
-    rotates the coordinates (x,y) counterclockwise through an angle theta around origin
+    Rotates the coordinates (x,y) counterclockwise through an angle theta around origin
 
     Parameters
     ----------
@@ -44,7 +44,7 @@ def rotate(x, y, theta, origin = [0,0]):
 
 def rotate_grid(xgr, ygr, theta):
     '''
-    rotate_grid(xgr,ygr,theta)
+    Rotate_grid(xgr,ygr,theta)
     rotates a grid xgr,ygr over the angle theta (in radians)
 
     Parameters
@@ -75,7 +75,7 @@ def rotate_grid(xgr, ygr, theta):
     
 def grid_world2local(xgr, ygr):
     '''
-    identifies the rotation angle of the x-axis of a 2D XBeach grid and returns grid in local coordinates
+    Identifies the rotation angle of the x-axis of a 2D XBeach grid and returns grid in local coordinates
     (i.e. x only cross shore, y only alongshore)
     output: rotated grid x,y and grid angle alpha
 

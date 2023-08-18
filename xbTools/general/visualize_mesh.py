@@ -15,21 +15,21 @@ from fiona.crs import from_epsg
 
 def plot_mesh(mesh_x,mesh_y,thinning=1,ax=None,**kwargs):
     '''
-    function to plot mesh based on meshgrid regular grid, option for thinning
+    Function to plot mesh based on meshgrid regular grid, option for thinning
 
     Parameters
     ----------
-    mesh_x : TYPE
-        DESCRIPTION.
-    mesh_y : TYPE
-        DESCRIPTION.
+    mesh_x : array
+        Array with x grid.
+    mesh_y : array
+        Array with y grid.
     thinning : integer to specify thinning of grid to plot. Default = 1
     ax : specify ax to which the mesh should be added. Default = None, which makes a new figure
     **kwargs : kwargs to feed into the plot function (e.g. color, linewidth)
 
     Returns
     -------
-    none
+    none.
 
     '''
     
@@ -43,15 +43,20 @@ def plot_mesh(mesh_x,mesh_y,thinning=1,ax=None,**kwargs):
 
 def write_mesh_to_shp(mesh_x,mesh_y,file_name,modelnr,EPSG=3844):
     '''
-    function to write mesh to shapefile
+    Function to write mesh to shapefile
 
     Parameters
     ----------
-    mesh_x : x-coordinates of the mesh
-    mesh_y : y-coordinates of the mesh
-    file_name : where to store the file
-    modelnr : which number to give to the lines
-    EPSG : optional CRS choice. The default is 32635.
+    mesh_x : array
+        x-coordinates of the mesh
+    mesh_y : array
+        y-coordinates of the mesh
+    file_name : string
+        where to store the file
+    modelnr : float
+        which number to give to the lines
+    EPSG : int
+        optional CRS choice. The default is 32635.
 
     Returns
     -------
