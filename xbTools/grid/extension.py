@@ -35,10 +35,10 @@ def lateral_extend(x,y,z,n=5):
         bathymetry
 
     '''
-    assert(x.ndim<2,'x must be a matrix')
-    assert(y.ndim<2,'y must be a matrix')
-    assert(z.ndim<2,'z must be a matrix')
-    assert(z.shape==x.shape==y.shape,'shape of input matrix is not the same')
+    assert x.ndim<2,'x must be a matrix'
+    assert y.ndim<2,'y must be a matrix'
+    assert z.ndim<2,'z must be a matrix'
+    assert z.shape==x.shape==y.shape,'shape of input matrix is not the same'
     
     dy1 = y[1,0]-y[0,0]
     dy2 = y[-1,0]-y[-2,0]
