@@ -11,5 +11,5 @@ setup(name='xbTools',
       license='MIT',
       packages=['xbTools'],
       python_requires='>=3, <4',
-      install_requires=['numpy','matplotlib','netCDF4','scipy','datetime','geopandas','shapely','fiona'],
+      install_requires=['numpy','matplotlib','netCDF4','scipy','datetime','geopandas','shapely','fiona','pytest'],
       zip_safe=False)
