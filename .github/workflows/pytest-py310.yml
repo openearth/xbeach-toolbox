@@ -22,12 +22,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools
-        python -m pip install -r requirements.txt
-        python -m pip install -r requirements_dev.txt
+        python setup.py install
     - name: list env contents
       run: |
-        conda info
-        conda list
         pip list
     - name: Lint with flake8
       run: |
