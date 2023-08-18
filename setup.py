@@ -1,6 +1,6 @@
 from setuptools import setup
 
-setup(name='xbTools',
+setup(name='xbeach-tools-bemc',
       version='0.0.2',
       description='Toolbox to analyse and setup xbeach models',
       url='https://github.com/openearth/xbeach-toolbox',
