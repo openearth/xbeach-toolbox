@@ -4,22 +4,36 @@ on:
   release:
     types: [created]
     
-# .github/workflows/ci-cd.yml
 jobs:
-  pypi-publish:
-    name: Upload release to PyPI
+  build-n-publish:
+    name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/xbTools
-    permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    
     steps:
-    # retrieve your distributions here
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.x"
 
-    - name: Publish package to TestPyPI
+    - name: Install pypa/build
+      run: >-
+        python3 -m
+        pip install
+        build
+        --user
+        
+    - name: Build a binary wheel and a source tarball
+      run: >-
+        python3 -m
+        build
+        --sdist
+        --wheel
+        --outdir dist/
+        .
+        
+    - name: Publish distribution 📦 to Test PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        packages-dir: xbeach-toolbox/
         password: ${{ secrets.PYPI_API_TOKEN }}
         repository-url: https://test.pypi.org/legacy/
