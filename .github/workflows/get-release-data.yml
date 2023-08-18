@@ -1,9 +1,0 @@
-name: Github release data
-
-on:
-  workflow_dispatch:
-
-jobs:
-  get-release-data:
-    name: Get Release data of private repository
-    uses: KevinRohn/github-full-release-data@v2.0.4
