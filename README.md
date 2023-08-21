@@ -1,4 +1,4 @@
-!\[my badge\]([https://badgen.net/badge/hello/world/red]?icon=twitter)
+!\[my badge\](https://badgen.net/badge/hello/world/red?icon=twitter)
 
 # About the xbeach-toolbox
 Welcome to the xbeach-toolbox! 
