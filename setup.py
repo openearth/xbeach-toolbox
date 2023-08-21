@@ -12,6 +12,7 @@ setup(name='xbTools',
       long_description_content_type='text/markdown',
       license='GNU General Public License v3.0',
       packages=['xbTools','xbTools.grid','xbTools.general'],
+      package_data={'': ['*.json']}, # always include .json files in the package contents
       python_requires='>=3, <4',
       install_requires=['numpy','matplotlib','netCDF4','scipy','datetime','geopandas','shapely','fiona','pytest'],
       zip_safe=False)
