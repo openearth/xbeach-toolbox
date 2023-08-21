@@ -1,5 +1,6 @@
 [![ReadTheDocs](http://readthedocs.org/projects/xbeach-toolbox/badge/?version=latest)](http://xbeach-toolbox.readthedocs.io/en/latest/)
 [![pytest-py310](https://github.com/openearth/xbeach-toolbox/actions/workflows/pytest-py310.yml/badge.svg?branch=main)](https://github.com/openearth/xbeach-toolbox/actions/workflows/pytest-py310.yml)
+[![pylint](https://github.com/openearth/xbeach-toolbox/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/openearth/xbeach-toolbox/actions/workflows/pylint.yml)
 
 # About the xbeach-toolbox
 Welcome to the xbeach-toolbox! 
