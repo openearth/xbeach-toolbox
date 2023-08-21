@@ -1,4 +1,4 @@
-[![ReadTheDocs](http://readthedocs.org/projects/aeolis/badge/?version=latest)](http://xbeach-toolbox.readthedocs.io/en/latest/)
+[![ReadTheDocs](http://readthedocs.org/projects/xbeach-toolbox/badge/?version=latest)](http://xbeach-toolbox.readthedocs.io/en/latest/)
 
 # About the xbeach-toolbox
 Welcome to the xbeach-toolbox! 
