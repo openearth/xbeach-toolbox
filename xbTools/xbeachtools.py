@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 
 # import rotate grid from geometry
 from .general.geometry import rotate_grid
-    
+from .general.deg2uv import deg2uv
+
 class XBeachModelSetup():
     '''
     XBeach model setup class
@@ -82,7 +83,7 @@ class XBeachModelSetup():
             if not value_added:
                 self.input_par['par'][input_par] = input_par_dict[input_par]
             
-    def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0,alfa=0, thetamin=-90, thetamax = 90, dtheta=10, dtheta_s=10):
+    def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0,alfa=0, thetamin=-90, thetamax = 90, thetanaut = 0, dtheta=10, dtheta_s=10):
         """_summary_
 
         Args:
@@ -95,6 +96,7 @@ class XBeachModelSetup():
             alfa (int, optional): _description_. Defaults to 0.
             thetamin (int, optional): _description_. Defaults to -90.
             thetamax (int, optional): _description_. Defaults to 90.
+            thetanaut (int, optional): _description_. Defaults to 0.
             dtheta (int, optional): _description_. Defaults to 10.
             dtheta_s (int, optional): _description_. Defaults to 10.
         """        
@@ -136,6 +138,7 @@ class XBeachModelSetup():
         self.yori   = yori
         self.thetamin   = thetamin
         self.thetamax   = thetamax
+        self.thetanaut  = thetanaut
         self.dtheta     = dtheta
         self.vardx  = 1
         self.alfa = alfa
@@ -309,6 +312,7 @@ class XBeachModelSetup():
             f.write('depfile\t= bed.dep\n'.expandtabs(tabnumber))
             f.write('thetamin\t= {}\n'.format(self.thetamin).expandtabs(tabnumber))
             f.write('thetamax\t= {}\n'.format(self.thetamax).expandtabs(tabnumber))
+            f.write('thetanaut\t= {}\n'.format(self.thetanaut))
             f.write('dtheta\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
             f.write('dtheta_s\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
             f.write('\n')
@@ -422,6 +426,31 @@ class XBeachModelSetup():
         else:
             print('Not possible to plot wave boundary')
             
+    def _make_theta_vectors(self):
+        """function to generate thetavectors for plotting arrows in the domain plot
+
+        Raises:
+            UserWarning: _description_
+
+        Returns:
+            _type_: _description_
+        """        
+        # make theta vectors
+        if self.thetanaut == 1: #use nautical conversion
+            thetamin_uv = deg2uv(self.thetamin)
+            thetamax_uv = deg2uv(self.thetamax)
+        
+        elif self.thetanaut == 0: #use cartesian conversion
+            thetamin_naut = self.thetamin+90
+            thetamax_naut = self.thetamax+90
+            thetamin_uv = deg2uv(thetamin_naut)
+            thetamax_uv = deg2uv(thetamax_naut)
+        
+        else: 
+            raise UserWarning(f"you cannot use thetanaut = {self.thetanaut}, please keep it 0/1")
+        
+        return thetamin_uv, thetamax_uv
+
     def _plotdomain(self,save_path=None):
         '''
         Plot the domain. 
@@ -437,32 +466,45 @@ class XBeachModelSetup():
 
         '''
         fig1 = plt.figure(figsize=(8,8))
+        thetamin_uv, thetamax_uv = self._make_theta_vectors()
         if self.fast1D==True:
             plt.subplot(2,1,1)
             plt.plot(np.squeeze(self.xgr),np.squeeze(self.zgr)*self.posdwn)
-            plt.xlabel('x')
             plt.ylabel('z')
             plt.subplot(2,1,2)
             plt.plot(np.squeeze(self.xgr)[1:],np.diff(np.squeeze(self.xgr)))
             plt.xlabel('x')
             plt.ylabel('dx')
-            plt.subplot(2,1,1)
         else:
-            plt.subplot(2,1,1)
+            plt.subplot(2,2,1)
             plt.pcolor(self.xgr,self.ygr,self.zgr*self.posdwn)
-            plt.xlabel('x')
             plt.ylabel('y')
             plt.colorbar()
             plt.axis('equal')
-            plt.title('Local coordinates')
-            plt.subplot(2,1,2)
+            plt.title('Local coordinates - input')
+
+            # add theta grid vectors
+            ax = plt.subplot(2,2,2)
+
+            ax.arrow(-thetamin_uv[0], -thetamin_uv[1], thetamin_uv[0], thetamin_uv[1], length_includes_head=True, head_width=0.08, head_length=0.2)
+            ax.arrow(-thetamax_uv[0], -thetamax_uv[1], thetamax_uv[0], thetamax_uv[1], length_includes_head=True, head_width=0.08, head_length=0.2)
+            
+            ax.text(-thetamin_uv[0], -thetamin_uv[1], '$\Theta_{min}$ = '+f'{self.thetamin:.2f}', ha = 'left', va = 'center')
+            ax.text(-thetamax_uv[0], -thetamax_uv[1], '$\Theta_{max}$ = '+f'{self.thetamax:.2f}', ha = 'left', va = 'center')
+            
+            ax.set_aspect('equal')
+            ax.set_title(f'thetanaut = {self.thetanaut}')
+            ax.axis('off')
+
+            plt.subplot(2,2,3)
             [X_world,Y_world] = rotate_grid(self.xgr,self.ygr,np.deg2rad(self.alfa))
             plt.pcolor(X_world+self.xori,Y_world+self.yori,self.zgr*self.posdwn)
             plt.xlabel('x')
             plt.ylabel('y')
             plt.axis('equal')
             plt.colorbar()
-            plt.title('World coordinates')
+            plt.title('World coordinates - output')
+
         plt.suptitle(self.fname)
 
         if self.struct == 1:
