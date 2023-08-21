@@ -1,4 +1,4 @@
-!\[my badge\](https://badgen.net/badge/hello/world/red?icon=twitter)
+[![ReadTheDocs](http://readthedocs.org/projects/aeolis/badge/?version=latest)](http://xbeach-toolbox.readthedocs.io/en/latest/)
 
 # About the xbeach-toolbox
 Welcome to the xbeach-toolbox! 
