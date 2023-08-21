@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='xbTools',
-      version='0.0.4',
+      version='0.0.5',
       description='Toolbox to analyse and setup xbeach models',
       url='https://github.com/openearth/xbeach-toolbox',
       # Authors: Menno de Ridder (menno.deridder@deltares.nl), Cas van Bemmelen (cas.van.bemmelen@witteveenbos.com)
