@@ -14,9 +14,7 @@ from datetime import datetime
 import json
 import matplotlib.pyplot as plt
 
-
-import xbTools as xb
-#from xbTools.general.geometry import rotate_grid
+from general.geometry import rotate_grid
     
 class XBeachModelSetup():
     '''
@@ -457,7 +455,7 @@ class XBeachModelSetup():
             plt.axis('equal')
             plt.title('Local coordinates')
             plt.subplot(2,1,2)
-            [X_world,Y_world] = xb.rotate_grid(self.xgr,self.ygr,np.deg2rad(self.alfa))
+            [X_world,Y_world] = rotate_grid(self.xgr,self.ygr,np.deg2rad(self.alfa))
             plt.pcolor(X_world+self.xori,Y_world+self.yori,self.zgr*self.posdwn)
             plt.xlabel('x')
             plt.ylabel('y')
