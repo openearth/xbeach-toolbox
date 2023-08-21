@@ -15,7 +15,7 @@ import json
 import matplotlib.pyplot as plt
 
 # import rotate grid from geometry
-from general.geometry import rotate_grid
+from .general.geometry import rotate_grid
     
 class XBeachModelSetup():
     '''
