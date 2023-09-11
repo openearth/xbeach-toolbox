@@ -29,8 +29,8 @@ class XBeachModelSetup():
         self.wbctype    = None
         self.wavemodel  = None
         
+        ## set default values
         self.model_path = None
-
         self.friction_layer = None
         self.wavefriction_layer = None
         self.struct = None
@@ -87,9 +87,9 @@ class XBeachModelSetup():
         """_summary_
 
         Args:
-            xgr (_type_): _description_
-            ygr (_type_): _description_
-            zgr (_type_): _description_
+            xgr (array): x-grid
+            ygr (array): y-grid
+            zgr (array): z-grid
             posdwn (int, optional): _description_. Defaults to 1.
             xori (int, optional): _description_. Defaults to 0.
             yori (int, optional): _description_. Defaults to 0.
@@ -113,7 +113,6 @@ class XBeachModelSetup():
             else:
                 self.xgr = xgr
                 self.zgr = zgr
-
         ## 2D model
         else:
             self.ygr = ygr
@@ -123,7 +122,6 @@ class XBeachModelSetup():
         ##
         self.nx = self.xgr.shape[1] - 1
         self.ny = self.xgr.shape[0] - 1
-        ##
         
         ## 1D
         if ygr is None or ygr.shape[0]==1:
@@ -131,7 +129,7 @@ class XBeachModelSetup():
             self.ny = 0
         else:
             self.fast1D = False 
-        ##
+        ## set values
         self.posdwn = posdwn
         self.xori   = xori
         self.yori   = yori
@@ -390,7 +388,7 @@ class XBeachModelSetup():
             ## plot and write domain
             self._plotdomain(path)
             ## plot and write wave boundary
-            if self.wbctype=='jonstable' or self.wbctype=='jons':
+            if self.wbctype=='jonstable' or self.wbctype=='parametric':
                 self._plot_boundary(path)
 
     def _plot_boundary(self,save_path=None):
@@ -421,8 +419,8 @@ class XBeachModelSetup():
             plt.xlabel('Time')
             if save_path!=None:
                 plt.savefig(os.path.join(save_path,'jonstable.png'))
-        elif self.wbctype=='jons':
-            print('wbctype=jons cannot be plotted')
+        elif self.wbctype=='paramtric':
+            print('wbctype=paramtric cannot be plotted')
         else:
             print('Not possible to plot wave boundary')
             
