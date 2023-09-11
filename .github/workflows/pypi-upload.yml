@@ -1,4 +1,4 @@
-name: pypi-test-upload
+name: pypi-upload
 
 on:
   release:
