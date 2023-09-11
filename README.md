@@ -24,8 +24,9 @@ Pip packages are hosted on the pypi server and can be installed as usual.
 # Release notes
 Release  | notes 
 ------------- | -------------
-0.0.1  | first release!
-0.0.2  | future content
+0.0.1  | first testing of package on test.pypi
+0.0.n  | additional testing on test.pypi until release
+1.0.0  | first official release on pypi 🎉
 
 # Usage / examples
 Basic examples have been added to the examples folder in the project.
