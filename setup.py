@@ -14,5 +14,5 @@ setup(name='xbTools',
       packages=['xbTools','xbTools.grid','xbTools.general'],
       package_data={'': ['*.json']}, # always include .json files in the package contents
       python_requires='>=3, <4',
-      install_requires=['numpy','matplotlib>=3.5.0','netCDF4>=1.6.0','scipy>=1.9.3','datetime','geopandas>=0.13.0','shapely>=2.0.0','fiona>=1.9.4.post1','pytest'],
+      install_requires=['numpy','matplotlib>=3.5.0','netCDF4>=1.6.0','scipy>=1.10.0','datetime','geopandas>=0.13.0','shapely>=2.0.0','fiona>=1.9.4.post1','pytest'],
       zip_safe=False)
