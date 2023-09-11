@@ -25,49 +25,49 @@ General
 Wave Functions
 ~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: xbTools.dispersion()
+.. autofunction:: xbTools.general.wave_functions.dispersion()
 
-.. autofunction:: xbTools.wavecelerity()
+.. autofunction:: xbTools.general.wave_functions.wavecelerity()
 
-.. autofunction:: xbTools.directional_spread_kuik()
+.. autofunction:: xbTools.general.wave_functions.directional_spread_kuik()
 
-.. autofunction:: xbTools.celerity_ratio_equals_09()
+.. autofunction:: xbTools.general.wave_functions.celerity_ratio_equals_09()
 
-.. autofunction:: xbTools.offshore_depth()
+.. autofunction:: xbTools.general.wave_functions.offshore_depth()
 
 Visualize mesh
 ~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: xbTools.plot_mesh()
+.. autofunction:: xbTools.general.visualize_mesh.plot_mesh()
 
-.. autofunction:: xbTools.write_mesh_to_shp()
+.. autofunction:: xbTools.general.visualize_mesh.write_mesh_to_shp()
 
-.. autofunction:: xbTools.grid_parameter_to_shape()
+.. autofunction:: xbTools.general.visualize_mesh.grid_parameter_to_shape()
 
-.. autofunction:: xbTools.grid_parameter_to_shape()
+.. autofunction:: xbTools.general.visualize_mesh.grid_parameter_to_shape()
 
 Executing runs
 ~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: xbTools.xb_run_script_win()
+.. autofunction:: xbTools.general.executing_runs.xb_run_script_win()
 
 Geometry
 ~~~~~~~~~~~~~~~~~~~~
 
 
-.. autofunction:: xbTools.rotate()
+.. autofunction:: xbTools.general.geometry.rotate()
 
-.. autofunction:: xbTools.rotate_grid()
+.. autofunction:: xbTools.general.geometry.rotate_grid()
 
-.. autofunction:: xbTools.grid_world2local()
+.. autofunction:: xbTools.general.geometry.grid_world2local()
 
-.. autofunction:: xbTools.samples_to_local_grid()
+.. autofunction:: xbTools.general.geometry.samples_to_local_grid()
 
-.. autofunction:: xbTools.in_polygon()
+.. autofunction:: xbTools.general.geometry.in_polygon()
 
-.. autofunction:: xbTools.get_points_in_polygon()
+.. autofunction:: xbTools.general.geometry.get_points_in_polygon()
 
-.. autofunction:: xbTools.path_distance()
+.. autofunction:: xbTools.general.geometry.path_distance()
 
 
 
@@ -79,23 +79,23 @@ Grid
 Refinement
 ~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: xbTools.grid_refine_grid()
+.. autofunction:: xbTools.grid.refinement.grid_refine_grid()
 
 Extionsion
 ~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: xbTools.lateral_extend()
+.. autofunction:: xbTools.grid.extension.lateral_extend()
 
-.. autofunction:: xbTools.seaward_extend()
+.. autofunction:: xbTools.grid.extension.seaward_extend()
 
 
 Creation
 ~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: xbTools.xgrid()
+.. autofunction:: xbTools.grid.creation.xgrid()
 
-.. autofunction:: xbTools.ygrid()
+.. autofunction:: xbTools.grid.creation.ygrid()
 
-.. autofunction:: xbTools.grid_transition()
+.. autofunction:: xbTools.grid.creation.grid_transition()
 
 
 
@@ -103,7 +103,7 @@ Creation
 XBeachtools
 ---------------------------------------
 
-.. autofunction:: xbTools.XBeachModelSetup()
+.. autofunction:: xbTools.xbeachtools.XBeachModelSetup()
 
 
 
@@ -111,4 +111,4 @@ XBeachtools
 XBeachModelAnalysis
 ---------------------------------------
 
-.. autofunction:: xbTools.XBeachModelAnalysis()
+.. autofunction:: xbTools.xbeachpost.XBeachModelAnalysis()
