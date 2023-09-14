@@ -1,4 +1,4 @@
-name: pypi-test-upload
+name: pypi-upload
 
 on:
   release:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-n-publish:
-    name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI
+    name: Build and publish Python 🐍 distributions 📦 to PyPI
     runs-on: ubuntu-latest
     
     steps:
@@ -33,9 +33,8 @@ jobs:
         --outdir dist/
         .
         
-    - name: Publish distribution 📦 to Test PyPI
+    - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         username: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
-        repository-url: https://test.pypi.org/legacy/
