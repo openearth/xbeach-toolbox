@@ -19,7 +19,9 @@ Information about the use of the XBeach model itself can be found on:
 https://xbeach.readthedocs.io/en/latest/.
 
 # Getting started / installation
-Pip packages are hosted on the pypi server and can be installed using **pip install xbTools**. 
+Pip packages are hosted on the pypi server and can be installed using:
+
+**pip install xbTools**. 
 
 # Release notes
 Release  | notes 
@@ -40,3 +42,5 @@ fork, issue, branch, commit, review, approve, merge
 Menno de Ridder - menno.deridder@deltares.nl
 
 Cas van Bemmelen - cas.van.bemmelen@witteveenbos.com
+
+Marlies van der Lugt
