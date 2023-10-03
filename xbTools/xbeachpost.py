@@ -412,7 +412,6 @@ class XBeachModelAnalysis():
                 self.var['station_x_local'].append(self.var['localx'][iy, ix])
                 self.var['station_y_local'].append(self.var['localy'][iy, ix])
 
-
         return
 
     def load_modeloutput(self, var):
