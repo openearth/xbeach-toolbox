@@ -28,6 +28,7 @@ class XBeachModelSetup():
         ## by default set wbctype and wavemodel to None
         self.wbctype    = None
         self.wavemodel  = None
+        self.zs0type    = None
         
         ## set default values
         self.model_path = None
@@ -50,11 +51,11 @@ class XBeachModelSetup():
             input_par_dict (_type_): _description_
         """        
         ## set wavemodel. Default is Surfbeat
-        if 'Wavemodel' not in input_par_dict:
+        if 'wavemodel' not in input_par_dict:
             print('No wavemodel defined. Wavemodel is set to Surfbeat')
             self.wavemodel = 'surfbeat'
         else:
-            self.wavemodel = input_par_dict['Wavemodel']
+            self.wavemodel = input_par_dict['wavemodel']
         
         ## set wbctype
         if 'wbctype' in input_par_dict:
@@ -165,8 +166,8 @@ class XBeachModelSetup():
 
         Parameters
         ----------
-        nebed : input of sandy layer thickness
-        struct : optional. The default is 1.
+        friction : input of sandy layer thickness
+        friction_layer : optional yes/no. The default is 1.
 
         Returns
         -------
@@ -176,14 +177,16 @@ class XBeachModelSetup():
         self.friction = friction
         self.friction_layer = friction_layer
 
+        # TODO option to specify what kind of bed friction there is: Manning/Chezy or else
+
     def set_wavefriction(self, wavefriction, wavefriction_layer = 1):      
         '''
-        function to set friction layer for the xbeach model
+        function to set wave friction layer for the xbeach model
 
         Parameters
         ----------
-        nebed : input of sandy layer thickness
-        struct : optional. The default is 1.
+        wavefriction : input of sandy layer thickness
+        wavefriction_layer : optional yes/no. The default is 1.
 
         Returns
         -------
@@ -219,10 +222,64 @@ class XBeachModelSetup():
         """        
         pass
 
-    def set_tide(self):
+    def set_wind(self):
         """_summary_
         """        
-        pass
+        pass        
+
+    def set_tide(self, zs0, optional_par_input = {}):
+        """
+        function to set offshore water level boundary conditions for the xbeach model
+
+        Parameters
+        ----------
+        zs0 (array): table of water levels in format [t, zs1, (zs2), (zs3, zs4)]
+        optional_par_input: dict with optional parameter settings: ['tideloc', 'tidetype', 'paulrevere']. If unspecified, tideloc is inferred from zs0.
+
+        Returns
+        -------
+        None.
+        """     
+
+        if np.atleast_1d(zs0).size > 1:
+            self.zs0type = 'list'
+        else:
+            self.zs0type = 'par'
+        ## 
+
+        self.tide_boundary = {}
+
+        if self.zs0type == 'list':
+            self.tide_boundary['zs0file'] = 'tide.txt'
+            optional_par = ['paulrevere', 'tideloc', 'tidetype']
+
+            for item in optional_par_input:
+                if item in optional_par:
+                    self.tide_boundary[item] = optional_par_input[item]
+                else:
+                    assert False, 'invalid tide parameter specified'
+
+            self.tide_boundary['_tidelen'] = zs0.shape[0]
+
+            # if not overruled by a specific par input, infer the tideloc from shape of zs0
+            if not 'tideloc' in optional_par_input:
+                tideloc_inferred = zs0.shape[1]-1
+                if tideloc_inferred in [1, 2, 4]:    
+                    self.tide_boundary['tideloc'] = tideloc_inferred
+                else:
+                    assert False, 'format of zs0 invalid: use either 1, 2 or 4 corners for zs0 specification'
+               
+        elif self.zs0type == 'par':
+            optional_par = []
+            self.tide_boundary['zs0'] = zs0
+
+        else:
+            assert False, 'Wrong zs0 format'
+
+        self.zs0 =  zs0
+
+        # TODO check that zs0file is at least as long as end time of simulation
+
         
     def load_model_setup(self,path):
         """_summary_
@@ -298,7 +355,7 @@ class XBeachModelSetup():
             f.write('%% Grid \n')
             f.write('\n')
             f.write('vardx\t= {}\n'.format(self.vardx).expandtabs(tabnumber))
-            f.write('posdwn\t={}\n'.format(self.posdwn).expandtabs(tabnumber))
+            f.write('posdwn\t= {}\n'.format(self.posdwn).expandtabs(tabnumber))
             f.write('nx\t= {}\n'.format(self.nx).expandtabs(tabnumber))
             f.write('ny\t= {}\n'.format(self.ny).expandtabs(tabnumber))
             f.write('xori\t= {}\n'.format(self.xori).expandtabs(tabnumber))
@@ -310,10 +367,24 @@ class XBeachModelSetup():
             f.write('depfile\t= bed.dep\n'.expandtabs(tabnumber))
             f.write('thetamin\t= {}\n'.format(self.thetamin).expandtabs(tabnumber))
             f.write('thetamax\t= {}\n'.format(self.thetamax).expandtabs(tabnumber))
-            f.write('thetanaut\t= {}\n'.format(self.thetanaut))
+            f.write('thetanaut\t= {}\n'.format(self.thetanaut).expandtabs(tabnumber))
             f.write('dtheta\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
             f.write('dtheta_s\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
             f.write('\n')
+
+            ## tide 
+            if self.zs0type != None:
+                f.write('%% Tide boundary conditions \n')
+                f.write('\n')        
+                if self.zs0type == 'par':
+                    f.write('zs0\t= {}\n'.format())    
+                elif self.zs0type == 'list':
+                    for item in self.tide_boundary:
+                        if item[0] != '_':
+                            f.write('{}\t= {}\n'.format(item, self.tide_boundary[item]).expandtabs(tabnumber))
+                f.write('\n')
+
+                
             
             ## write input vars
             for par_category in self.input_par:
@@ -327,6 +398,8 @@ class XBeachModelSetup():
                 for par in self.input_par[par_category]:
                     f.write('{}\t= {}\n'.format(par,self.input_par[par_category][par]).expandtabs(tabnumber))
                 f.write('\n')
+
+
             ## write output variables
             if '_Output' in self.input_par:
                 f.write('%% Output variables \n')
@@ -368,19 +441,30 @@ class XBeachModelSetup():
                     for jj in range(self.nx+1):
                         f.write('{} '.format(self.nebed[ii,jj]))
                     f.write('\n')   
-                
+
+        ## write bottom friction layer        
         if self.friction_layer != None:
             with open(os.path.join(path,'friction.dep'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
                         f.write('{} '.format(self.friction[ii,jj]))
                     f.write('\n')  
-                    
+
+        ## write wave bottom friction layer            
         if self.wavefriction_layer != None:
             with open(os.path.join(path,'wavefriction.dep'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
                         f.write('{} '.format(self.wavefriction[ii,jj]))
+                    f.write('\n')   
+
+        ## write tide boundary condition
+         
+        if self.zs0type == 'list':
+            with open(os.path.join(path,'tide.txt'), 'w') as f:
+                for ir in range(self.tide_boundary['_tidelen']):
+                    for ic in range(self.tide_boundary['tideloc'] + 1):
+                        f.write('{} '.format(self.zs0[ir, ic]))
                     f.write('\n')   
 
         ## write figures
@@ -419,8 +503,8 @@ class XBeachModelSetup():
             plt.xlabel('Time')
             if save_path!=None:
                 plt.savefig(os.path.join(save_path,'jonstable.png'))
-        elif self.wbctype=='paramtric':
-            print('wbctype=paramtric cannot be plotted')
+        elif self.wbctype=='parametric':
+            print('wbctype=parametric cannot be plotted')
         else:
             print('Not possible to plot wave boundary')
             
