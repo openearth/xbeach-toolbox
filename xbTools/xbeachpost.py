@@ -2,7 +2,7 @@
 """
 Created on Fri Aug 11 14:10:02 2023
 
-@author: MarliesA
+@author: Marlies van der Lugt
 main collection for the postprocessing of XBeach models
 module contains class for analysis of 2D XBeach models 
 note that output and input must be available in directory
