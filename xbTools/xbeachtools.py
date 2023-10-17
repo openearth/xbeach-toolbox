@@ -416,7 +416,7 @@ class XBeachModelSetup():
         with open(os.path.join(path,'x.grd'),'w') as f:
             for ii in range(self.ny+1):
                 for jj in range(self.nx+1):
-                    f.write('{} '.format(self.xgr[ii,jj]))
+                    f.write('{:.3f} '.format(self.xgr[ii,jj]))
                 f.write('\n')
 
         if not self.ygr is None:
@@ -424,14 +424,14 @@ class XBeachModelSetup():
             with open(os.path.join(path,'y.grd'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
-                        f.write('{} '.format(self.ygr[ii,jj]))
+                        f.write('{:.3f} '.format(self.ygr[ii,jj]))
                     f.write('\n')
 
        ## write dep
         with open(os.path.join(path,'bed.dep'),'w') as f:
             for ii in range(self.ny+1):
                 for jj in range(self.nx+1):
-                    f.write('{} '.format(self.zgr[ii,jj]))
+                    f.write('{:.3f} '.format(self.zgr[ii,jj]))
                 f.write('\n')             
                 
         ## write ne-layer
