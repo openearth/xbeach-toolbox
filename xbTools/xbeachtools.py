@@ -447,7 +447,7 @@ class XBeachModelSetup():
             with open(os.path.join(path,'friction.dep'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
-                        f.write('{} '.format(self.friction[ii,jj]))
+                        f.write('{:.3f} '.format(self.friction[ii,jj]))
                     f.write('\n')  
 
         ## write wave bottom friction layer            

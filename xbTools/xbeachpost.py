@@ -52,7 +52,7 @@ class XBeachModelAnalysis():
         self.plot_km_coords = False
         self.AOI = []
         self.globalstarttime = None
-        self.unitdict = {'Hm0': ' [m]', 'H': ' [m]', 'zs': ' [m+NAP]', 'u': ' [m/s]', 'v': ' [m/s]',
+        self.unitdict = {'Hm0': ' [m]', 'H': ' [m]', 'zs': ' [m]', 'u': ' [m/s]', 'v': ' [m/s]',
                          'zb': ' [m]', 'thetamean': ' [deg]', 'beta': '[-]'}
 
     def get_metadata(self):
@@ -312,7 +312,7 @@ class XBeachModelAnalysis():
         x = ds.variables['globalx'][:]
         y = ds.variables['globaly'][:]
         if len(self.AOI) > 0:
-            assert len(self.AOI) == 4, 'AOI should be specified as [x0, xend, y0, yend]'
+            assert len(self.AOI) == 4, 'AOI should be specified as [i_y0, i_yend, i_x0, i_xend]'
 
             x = x[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
             y = y[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
@@ -426,6 +426,8 @@ class XBeachModelAnalysis():
 
         if '_mean' in var:
             assert sum([var[:-5] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
+        elif '_var' in var:
+            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
         elif '_min' in var:
             assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
         elif '_max' in var:
@@ -758,7 +760,7 @@ class XBeachModelAnalysis():
             self.load_modeloutput(var)
         except:
             print('var not found as output specified in params. Will try to continue to see if computed earlier')
-        self.load_modeloutput('zb')
+        
 
         x = self.var['globalx']
         y = self.var['globaly']
@@ -768,7 +770,6 @@ class XBeachModelAnalysis():
             iy, _ = np.unravel_index(((x - coord[0]) ** 2 + (y - coord[1]) ** 2).argmin(), x.shape)
 
         data = self.var[var][it, iy, :]
-        z = self.var['zb'][it, iy, :]
         cross = self.var['cross']
 
         fig, ax1 = plt.subplots(figsize=[5, 3])
@@ -781,6 +782,9 @@ class XBeachModelAnalysis():
             ax1.set_xlabel('cross shore [m]')
 
         if plot_ref_bathy:
+            self.load_modeloutput('zb')
+            z = self.var['zb'][it, iy, :]
+
             ax2 = ax1.twinx()
             ax1.set_zorder(ax2.get_zorder() + 1)  # move ax in front
             ax1.patch.set_visible(False)
