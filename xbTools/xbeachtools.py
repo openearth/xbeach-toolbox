@@ -414,9 +414,10 @@ class XBeachModelSetup():
     
         ## write grid x
         with open(os.path.join(path,'x.grd'),'w') as f:
+            xgr = np.atleast_2d(self.xgr)
             for ii in range(self.ny+1):
                 for jj in range(self.nx+1):
-                    f.write('{:.3f} '.format(self.xgr[ii,jj]))
+                    f.write('{:.3f} '.format(xgr[ii,jj]))
                 f.write('\n')
 
         if not self.ygr is None:
@@ -429,33 +430,37 @@ class XBeachModelSetup():
 
        ## write dep
         with open(os.path.join(path,'bed.dep'),'w') as f:
+            zgr = np.atleast_2d(self.zgr)
             for ii in range(self.ny+1):
                 for jj in range(self.nx+1):
-                    f.write('{:.3f} '.format(self.zgr[ii,jj]))
+                    f.write('{:.3f} '.format(zgr[ii,jj]))
                 f.write('\n')             
                 
         ## write ne-layer
         if self.struct != None:
+            nebed = np.atleast_2d(self.nebed)
             with open(os.path.join(path,'ne_bed.dep'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
-                        f.write('{} '.format(self.nebed[ii,jj]))
+                        f.write('{} '.format(nebed[ii,jj]))
                     f.write('\n')   
 
         ## write bottom friction layer        
         if self.friction_layer != None:
+            friction = np.atleast_2d(self.friction)
             with open(os.path.join(path,'friction.dep'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
-                        f.write('{:.3f} '.format(self.friction[ii,jj]))
+                        f.write('{:.3f} '.format(friction[ii,jj]))
                     f.write('\n')  
 
         ## write wave bottom friction layer            
         if self.wavefriction_layer != None:
+            wavefriction = np.atleast_2d(self.wavefriction)
             with open(os.path.join(path,'wavefriction.dep'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
-                        f.write('{} '.format(self.wavefriction[ii,jj]))
+                        f.write('{} '.format(wavefriction[ii,jj]))
                     f.write('\n')   
 
         ## write tide boundary condition
