@@ -542,8 +542,8 @@ class XBeachModelAnalysis():
         assert 'zs0file' in self.params, 'No tidal signal available'
 
         # get model output
-        self.load_modeloutput('zs')
-        zs = self.var['zs']
+        self.load_modeloutput('zs_mean')
+        zs = self.var['zs_mean']
 
         # get model input
         if self.tide == {}:
@@ -626,7 +626,7 @@ class XBeachModelAnalysis():
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
 
-        if np.max(np.abs(dat))<0.001:
+        if np.max(np.abs(dat))<0.01:
             fmt = lambda x, pos: '{:.1e}'.format(x)
         else:
             fmt = lambda x, pos: '{:.1f}'.format(x)
@@ -658,7 +658,7 @@ class XBeachModelAnalysis():
 
         return fig, ax
 
-    def fig_map_var(self, var, label, it=np.inf, figsize=None, **kwargs):
+    def fig_map_var(self, var, label=None, it=np.inf, figsize=None, **kwargs):
         """_summary_
 
         Args:
@@ -677,6 +677,8 @@ class XBeachModelAnalysis():
         assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
 
         data = self.var[var][it, :, :]
+        if label is None:
+            label = str(var)
         fig, ax = self._fig_map_var(data, label, figsize, **kwargs)
 
         if self.globalstarttime is None:
