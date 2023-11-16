@@ -40,7 +40,9 @@ def plot_mesh(mesh_x,mesh_y,thinning=1,ax=None,**kwargs):
     # thin on y axis and then on x axis if value > 1
     ax.plot(mesh_x[:,::thinning], mesh_y[:,::thinning], **kwargs)
     ax.plot(mesh_x[::thinning,:].T, mesh_y[::thinning,:].T, **kwargs)
-
+    ax.plot(mesh_x[:,-1], mesh_y[:,-1], **kwargs)
+    ax.plot(mesh_x[-1,:].T, mesh_y[-1,:].T, **kwargs)
+    
 def write_mesh_to_shp(mesh_x,mesh_y,file_name,modelnr,EPSG=3844):
     '''
     Function to write mesh to shapefile
