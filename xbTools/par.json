@@ -1,4 +1,4 @@
-{"Physical processes":["wavemodel","sedtrans","morphology","vegetation","spongelength","ships","wind","viscosity","swrunup","swave","snells","single_dir","setbathy","gwflow","avalanching"],
+{"Physical processes":["wavemodel","sedtrans","morphology","vegetation","spongelength","ships","wind","viscosity","swrunup","swave","snells","single_dir","setbathy","gwflow","avalanching","nonhq3d"],
 "Initial conditions":["zs0","zsinitfile","hotstartflow"],
 "Model time":["tstop","CFL"],
 "Grid parameters":["thetamin","thetamax","dtheta","dtheta_s","thetanaut","posdwn"],
