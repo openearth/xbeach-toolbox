@@ -2,7 +2,6 @@
 """
 Created on Wed May 5 10:04:00 2023
 
-@author: Cas van Bemmelen
 collection containing executing run functionalities
 """
 # import python modules
@@ -38,7 +37,7 @@ def xb_run_script_win(xb, N, maindir, xbeach_exe):
             for item in xb:
                 path_sims.append(item.model_path)
         elif isinstance(xb[0],str):
-            path_sims = [xb]
+            path_sims = xb
         else:
             print('Unvalid path')
     else:
@@ -64,4 +63,5 @@ def xb_run_script_win(xb, N, maindir, xbeach_exe):
         print(os.path.join(maindir,'run{}.bat'.format(run_number)))
         with open(os.path.join(maindir,'run{}.bat'.format(run_number)), 'w') as f:
             f.write(string)
+   
     

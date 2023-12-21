@@ -103,11 +103,16 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
     
     ## maximum distance
     distance    = (z0max - depth)/slope
+
     ## prevent very small grid sizes!
     distance    = np.ceil(distance/dx_grid) * dx_grid
+    
     ## dummy array
     x_dummy     = np.arange(x[0, 0]-distance, x[0, 0], dx_grid)
-    
+    # prevent very small grid sizes when floating point zero goes wrong for computing var distance!
+    if (x_dummy[-1]-x[0, 0])< 0.01:
+        x_dummy = x_dummy[:-1]  
+
     x_extend    = np.ones((x.shape[0], len(x_dummy) ))
     x_extend    = x_extend * x_dummy
     z_extend    = np.ones_like(x_extend)

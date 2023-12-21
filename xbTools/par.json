@@ -1,21 +1,159 @@
-{"Physical processes":["wavemodel","sedtrans","morphology","vegetation","spongelength","ships","wind","viscosity","swrunup","swave","snells","single_dir","setbathy","gwflow","avalanching","nonhq3d"],
-"Initial conditions":["zs0","zsinitfile","hotstartflow"],
-"Model time":["tstop","CFL"],
-"Grid parameters":["thetamin","thetamax","dtheta","dtheta_s","thetanaut","posdwn"],
-"Flow boundary condition parameters":["front","back","left","right"],
-"Flow parameters":["tidetype","epsi","bedfriction","bedfriccoef","nuhfac","bedfricfile"],
-"Flow numerics parameters" : ["eps","eps_sd"],
-"Tide boundary conditions":["zs0file","tideloc","paulrevere"],
-"Wave boundary condition parameters":["Hrms","Tlong","Trep","dir0","m","taper","Tm01"],
-"Wave-spectrum boundary condition parameters":["wbctype","rt","Tm01switch","correctHm0","dtbc","dthetaS_XB","fcutoff","nonhspectrum","nspectrumloc","nspr","random","sprdthr","trepfac","wbcEvarreduce","wbcScaleEnergy","wbcRemoveStokes","wbcversion"],
-"Wave breaking parameters":["break","gamma","gamma2","alpha","deltahmin","fwfile"],
-"Roller parameters":["beta"],
-"Morphology parameters":["morstart","morfac","wetslp","struct","ne_layer","Hswitch"],
-"Sediment input":["por","ws","rhos","ngd"],
-"Bed composition parameters":["D50","D90"],
-"Bed update numerics parameters":["nTrepavaltime"],
-"Sediment transport parameters":["form","waveform","facSk","facAs","bulk","alfaD50","oldTsmin","oldhmin","bulk"],
-"Sediment transport numerics parameters":["dtlimTs"],
-"Avalanching":["wetslp","dryslp","fixedavaltime"],
-"Output":["outputformat","tintg","tintm","tstart","tintp","tintc","nrugdepth","outputprecision","timings"],
-"_Output": ["nglobalvar","nmeanvar","npointvar","npoints"]}
+{
+    "_General": [
+        "wavemodel",
+        "wbctype"
+    ],
+    "Physical processes": [
+        "sedtrans",
+        "morphology",
+        "vegetation",
+        "spongelength",
+        "ships",
+        "wind",
+        "viscosity",
+        "swrunup",
+        "swave",
+        "snells",
+        "single_dir",
+        "setbathy",
+        "gwflow",
+        "avalanching",
+        "cyclic",
+        "nonhq3d"
+    ],
+    "Initial conditions": [
+        "zs0",
+        "zsinitfile",
+        "hotstartflow"
+    ],
+    "Model time": [
+        "tstop",
+        "CFL"
+    ],
+    "Grid parameters": [
+        "thetamin",
+        "thetamax",
+        "dtheta",
+        "dtheta_s",
+        "thetanaut",
+        "posdwn"
+    ],
+    "Flow boundary condition parameters": [
+        "front",
+        "back",
+        "left",
+        "right"
+    ],
+    "Flow parameters": [
+        "tidetype",
+        "epsi",
+        "bedfriction",
+        "bedfriccoef",
+        "nuhfac",
+        "bedfricfile"
+    ],
+    "Flow numerics parameters": [
+        "eps",
+        "eps_sd"
+    ],
+    "Tide boundary conditions": [
+        "zs0file",
+        "tideloc",
+        "paulrevere"
+    ],
+    "Wave boundary condition parameters": [
+        "Hrms",
+        "Tlong",
+        "Trep",
+        "dir0",
+        "m",
+        "taper",
+        "Tm01"
+    ],
+    "Wave-spectrum boundary condition parameters": [
+        "rt",
+        "Tm01switch",
+        "correctHm0",
+        "dtbc",
+        "dthetaS_XB",
+        "fcutoff",
+        "nonhspectrum",
+        "nspectrumloc",
+        "nspr",
+        "random",
+        "sprdthr",
+        "trepfac",
+        "wbcEvarreduce",
+        "wbcScaleEnergy",
+        "wbcRemoveStokes",
+        "wbcversion"
+    ],
+    "Wave breaking parameters": [
+        "break",
+        "gamma",
+        "gamma2",
+        "alpha",
+        "deltahmin",
+        "fwfile"
+    ],
+    "Roller parameters": [
+        "beta"
+    ],
+    "Morphology parameters": [
+        "morstart",
+        "morfac",
+        "wetslp",
+        "struct",
+        "ne_layer",
+        "Hswitch"
+    ],
+    "Sediment input": [
+        "por",
+        "ws",
+        "rhos",
+        "ngd"
+    ],
+    "Bed composition parameters": [
+        "D50",
+        "D90"
+    ],
+    "Bed update numerics parameters": [
+        "nTrepavaltime"
+    ],
+    "Sediment transport parameters": [
+        "form",
+        "waveform",
+        "facSk",
+        "facAs",
+        "bulk",
+        "alfaD50",
+        "oldTsmin",
+        "oldhmin",
+        "bulk"
+    ],
+    "Sediment transport numerics parameters": [
+        "dtlimTs"
+    ],
+    "Avalanching": [
+        "wetslp",
+        "dryslp",
+        "fixedavaltime"
+    ],
+    "Output": [
+        "outputformat",
+        "tintg",
+        "tintm",
+        "tstart",
+        "tintp",
+        "tintc",
+        "nrugdepth",
+        "outputprecision",
+        "timings"
+    ],
+    "_Output": [
+        "nglobalvar",
+        "nmeanvar",
+        "npointvar",
+        "npoints"
+    ]
+}

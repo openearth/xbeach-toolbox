@@ -2,7 +2,7 @@
 """
 Created on Fri Aug 11 14:10:02 2023
 
-@author: MarliesA
+@author: Marlies van der Lugt
 main collection for the postprocessing of XBeach models
 module contains class for analysis of 2D XBeach models 
 note that output and input must be available in directory
@@ -52,7 +52,7 @@ class XBeachModelAnalysis():
         self.plot_km_coords = False
         self.AOI = []
         self.globalstarttime = None
-        self.unitdict = {'Hm0': ' [m]', 'H': ' [m]', 'zs': ' [m+NAP]', 'u': ' [m/s]', 'v': ' [m/s]',
+        self.unitdict = {'Hm0': ' [m]', 'H': ' [m]', 'zs': ' [m]', 'u': ' [m/s]', 'v': ' [m/s]',
                          'zb': ' [m]', 'thetamean': ' [deg]', 'beta': '[-]'}
 
     def get_metadata(self):
@@ -312,7 +312,7 @@ class XBeachModelAnalysis():
         x = ds.variables['globalx'][:]
         y = ds.variables['globaly'][:]
         if len(self.AOI) > 0:
-            assert len(self.AOI) == 4, 'AOI should be specified as [x0, xend, y0, yend]'
+            assert len(self.AOI) == 4, 'AOI should be specified as [i_y0, i_yend, i_x0, i_xend]'
 
             x = x[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
             y = y[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
@@ -426,6 +426,8 @@ class XBeachModelAnalysis():
 
         if '_mean' in var:
             assert sum([var[:-5] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
+        elif '_var' in var:
+            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
         elif '_min' in var:
             assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
         elif '_max' in var:
@@ -540,8 +542,8 @@ class XBeachModelAnalysis():
         assert 'zs0file' in self.params, 'No tidal signal available'
 
         # get model output
-        self.load_modeloutput('zs')
-        zs = self.var['zs']
+        self.load_modeloutput('zs_mean')
+        zs = self.var['zs_mean']
 
         # get model input
         if self.tide == {}:
@@ -624,7 +626,7 @@ class XBeachModelAnalysis():
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
 
-        if np.max(np.abs(dat))<0.001:
+        if np.max(np.abs(dat))<0.01:
             fmt = lambda x, pos: '{:.1e}'.format(x)
         else:
             fmt = lambda x, pos: '{:.1f}'.format(x)
@@ -656,7 +658,7 @@ class XBeachModelAnalysis():
 
         return fig, ax
 
-    def fig_map_var(self, var, label, it=np.inf, figsize=None, **kwargs):
+    def fig_map_var(self, var, label=None, it=np.inf, figsize=None, **kwargs):
         """_summary_
 
         Args:
@@ -675,6 +677,8 @@ class XBeachModelAnalysis():
         assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
 
         data = self.var[var][it, :, :]
+        if label is None:
+            label = str(var)
         fig, ax = self._fig_map_var(data, label, figsize, **kwargs)
 
         if self.globalstarttime is None:
@@ -758,7 +762,7 @@ class XBeachModelAnalysis():
             self.load_modeloutput(var)
         except:
             print('var not found as output specified in params. Will try to continue to see if computed earlier')
-        self.load_modeloutput('zb')
+        
 
         x = self.var['globalx']
         y = self.var['globaly']
@@ -768,7 +772,6 @@ class XBeachModelAnalysis():
             iy, _ = np.unravel_index(((x - coord[0]) ** 2 + (y - coord[1]) ** 2).argmin(), x.shape)
 
         data = self.var[var][it, iy, :]
-        z = self.var['zb'][it, iy, :]
         cross = self.var['cross']
 
         fig, ax1 = plt.subplots(figsize=[5, 3])
@@ -781,6 +784,9 @@ class XBeachModelAnalysis():
             ax1.set_xlabel('cross shore [m]')
 
         if plot_ref_bathy:
+            self.load_modeloutput('zb')
+            z = self.var['zb'][it, iy, :]
+
             ax2 = ax1.twinx()
             ax1.set_zorder(ax2.get_zorder() + 1)  # move ax in front
             ax1.patch.set_visible(False)
