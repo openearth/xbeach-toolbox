@@ -52,8 +52,6 @@ class XBeachModelAnalysis():
         self.plot_km_coords = False
         self.AOI = []
         self.globalstarttime = None
-        self.unitdict = {'Hm0': ' [m]', 'H': ' [m]', 'zs': ' [m]', 'u': ' [m/s]', 'v': ' [m/s]',
-                         'zb': ' [m]', 'thetamean': ' [deg]', 'beta': '[-]'}
 
     def get_metadata(self):
         '''
@@ -126,16 +124,6 @@ class XBeachModelAnalysis():
         """        
         assert type(tstart) is str, 'tstart must be given as a string of the format 2021-10-11T13:00:00'
         self.globalstarttime = np.datetime64(tstart)
-
-    def set_unitdict(self,unitdict):
-        """_summary_
-
-        Args:
-            unitdict (_type_): _description_
-        """        
-        assert type(unitdict) is dict, 'unitdict must be given in dictionary format'
-        for item in unitdict:
-            self.unitdict[item] = unitdict[item]
 
     def get_params(self):
         """
@@ -597,11 +585,13 @@ class XBeachModelAnalysis():
             ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
             ax.xaxis.set_minor_locator(IndexLocator(base=6 / 24, offset=0))
 
+        plt.tight_layout()
         if self.save_fig:
+            
             plt.savefig(os.path.join(self.model_path, 'fig', 'wl_bc_check.png'), dpi=200)
         return fig, ax
     
-    def _fig_map_var(self, dat, label, figsize=None, **kwargs):
+    def _fig_map_var(self, dat, label, figsize=None, figax = None, **kwargs):
         """_summary_
 
         Args:
@@ -620,13 +610,16 @@ class XBeachModelAnalysis():
             x = self.var['globalx']
             y = self.var['globaly']
 
-
-        fig, ax = plt.subplots(figsize=figsize)
+        if figax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        else:
+            fig, ax = figax
+        
         im = ax.pcolor(x, y, dat, **kwargs)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
 
-        if np.max(np.abs(dat))<0.01:
+        if np.max(np.abs(dat))<0.1:
             fmt = lambda x, pos: '{:.1e}'.format(x)
         else:
             fmt = lambda x, pos: '{:.1f}'.format(x)
@@ -658,7 +651,7 @@ class XBeachModelAnalysis():
 
         return fig, ax
 
-    def fig_map_var(self, var, label=None, it=np.inf, figsize=None, **kwargs):
+    def fig_map_var(self, var, label=None, it=np.inf, figsize=None, figax=None, **kwargs):
         """_summary_
 
         Args:
@@ -678,14 +671,23 @@ class XBeachModelAnalysis():
 
         data = self.var[var][it, :, :]
         if label is None:
-            label = str(var)
-        fig, ax = self._fig_map_var(data, label, figsize, **kwargs)
+            try:
+                label = str(var)  + ' [' + self.units[var] + ']'
+            except:
+                print('unit of {} missing in units'.format(var))
+                label = str(var)
+            
 
+        fig, ax = self._fig_map_var(data, label, figsize, figax=figax, **kwargs)
+            
         if self.globalstarttime is None:
-            ax.set_title(var+' - t = {:.1f}Hr'.format(self.var['globaltime'][it] ))
+            ax.set_title('{:.1f}Hr'.format(self.var['globaltime'][it] ))
         else:
-            ax.set_title(var+' - t = {}'.format(self.var['globaltime'][it]))
+            ax.set_title('{}'.format(self.var['globaltime'][it]))
+
+        plt.tight_layout()
         if self.save_fig:
+                
             folder = os.path.join(self.model_path, 'fig', 'map_{}'.format(var[0]))
             if not os.path.exists(folder):
                 os.mkdir(folder)
@@ -736,7 +738,7 @@ class XBeachModelAnalysis():
             ax.set_title('{} - {}'.format(self.var['globaltime'][itend],
                                                       self.var['globaltime'][it0]))
 
-        fig.tight_layout()
+        plt.tight_layout()
 
         if self.save_fig:
             plt.savefig(os.path.join(self.model_path, 'fig', 'difmap_{}_it_{}-{}.png'.format(var, itend, it0)), dpi=200)
@@ -824,6 +826,8 @@ class XBeachModelAnalysis():
         """        
         if iy is None:
             assert coord is not None, 'if no iy index is specified, a coordinate needs to be specified (xi,yi)'
+            iy, _ = np.unravel_index(((self.var['globalx'][:] - coord[0]) ** 2 + (self.var['globaly'][:] - coord[1]) ** 2).argmin(), self.var['globalx'].shape)
+
 
         zs = self.get_modeloutput('zs')
         zb = self.get_modeloutput('zb')
@@ -860,6 +864,7 @@ class XBeachModelAnalysis():
         plt.ylim([-25, 12])
         plt.grid(linestyle=':', color='grey', linewidth=0.5)
 
+        plt.tight_layout()
         if self.save_fig:
             plt.savefig(os.path.join(self.model_path, 'fig', 'profile_change_iy{}.png'.format(iy)), dpi=200)
 
@@ -874,7 +879,7 @@ class XBeachModelAnalysis():
             var (list, optional): _description_. Defaults to ['ue', 've'].
             label (str, optional): _description_. Defaults to 'ue [m/s]'.
             it (_type_, optional): _description_. Defaults to np.inf.
-            streamspacing (int, optional): _description_. Defaults to 50.
+            streamspacing (int, optional): spacing between quiver arrows in meters. Defaults to 50.
             figsize (_type_, optional): _description_. Defaults to None.
             vmax (_type_, optional): _description_. Defaults to None.
             vmin (_type_, optional): _description_. Defaults to None.
@@ -883,17 +888,24 @@ class XBeachModelAnalysis():
         Returns:
             _type_: _description_
         """        
-
+        # toolbox specific import
+        from .general.geometry import rotate_grid
+            
         warnings.filterwarnings("ignore", category=RuntimeWarning)
 
         ja_plot_localcoords = self.plot_localcoords
 
         if ja_plot_localcoords is False:
+            print('can only plot quiver in local coordinates so changing the setting of ja_plot_localcoords')
             self.set_plot_localcoords(True)
 
         self.load_modeloutput(var[0])
         self.load_modeloutput(var[1])
 
+        if self.plot_km_coords:
+            # reduce the streamspacing to km's internally
+            streamspacing = streamspacing/1e3
+        
         if np.isinf(it):
             it = len(self.var['globaltime']) - 1
         assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
@@ -913,7 +925,7 @@ class XBeachModelAnalysis():
             v = np.flipud(self.var[var[1]][it, ifrac, :, :].data)
             data = np.sqrt((self.var[var[0]][it, ifrac, :, :]) ** 2 + (self.var[var[1]][it, ifrac, :, :]) ** 2).squeeze()
 
-        u, v = xb.rotate_grid(u, v, self.var['gridang'])
+        u, v = rotate_grid(u, v, self.var['gridang'])
 
         fu = interp2d(x[:, 0], y[0, :], u.T)
         fv = interp2d(x[:, 0], y[0, :], v.T)
@@ -924,8 +936,11 @@ class XBeachModelAnalysis():
         ut = fu(xt, yt)
         vt = fv(xt, yt)
 
+        if 'color' not in kwargs:
+            kwargs['color'] = 'white'
+        
         fig, ax = self._fig_map_var(data, label,figsize=figsize, **{'cmap': 'jet', 'vmax': vmax, 'vmin': vmin})
-        ax.quiver(X, Y, ut, vt, color='w', units='xy', pivot='middle', **kwargs)
+        ax.quiver(X, Y, ut, vt, units='xy', pivot='middle', **kwargs)
         # ax.streamplot(X, Y, ut, vt, color='k')
 
         fig.tight_layout()
