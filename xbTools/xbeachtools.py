@@ -556,7 +556,7 @@ class XBeachModelSetup():
         thetamin_uv, thetamax_uv = self._make_theta_vectors()
         if self.fast1D==True:
             plt.subplot(2,1,1)
-            plt.plot(np.squeeze(self.xgr),np.squeeze(self.zgr)*self.posdwn)
+            plt.plot(np.squeeze(self.xgr),np.squeeze(self.zgr)*-self.posdwn)
             plt.ylabel('z')
             plt.subplot(2,1,2)
             plt.plot(np.squeeze(self.xgr)[1:],np.diff(np.squeeze(self.xgr)))
@@ -564,7 +564,7 @@ class XBeachModelSetup():
             plt.ylabel('dx')
         else:
             plt.subplot(2,2,1)
-            plt.pcolor(self.xgr,self.ygr,self.zgr*self.posdwn)
+            plt.pcolor(self.xgr,self.ygr,self.zgr*-self.posdwn)
             plt.ylabel('y')
             plt.colorbar()
             plt.axis('equal')
@@ -585,7 +585,7 @@ class XBeachModelSetup():
 
             plt.subplot(2,2,3)
             [X_world,Y_world] = rotate_grid(self.xgr,self.ygr,np.deg2rad(self.alfa))
-            plt.pcolor(X_world+self.xori,Y_world+self.yori,self.zgr*self.posdwn)
+            plt.pcolor(X_world+self.xori,Y_world+self.yori,self.zgr*-self.posdwn)
             plt.xlabel('x')
             plt.ylabel('y')
             plt.axis('equal')
