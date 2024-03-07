@@ -28,9 +28,10 @@ class XBeachModelSetup():
         ## by default set wbctype and wavemodel to None
         self.wbctype    = None
         self.wavemodel  = None
+        self.zs0type    = None
         
+        ## set default values
         self.model_path = None
-
         self.friction_layer = None
         self.wavefriction_layer = None
         self.struct = None
@@ -50,11 +51,11 @@ class XBeachModelSetup():
             input_par_dict (_type_): _description_
         """        
         ## set wavemodel. Default is Surfbeat
-        if 'Wavemodel' not in input_par_dict:
+        if 'wavemodel' not in input_par_dict:
             print('No wavemodel defined. Wavemodel is set to Surfbeat')
             self.wavemodel = 'surfbeat'
         else:
-            self.wavemodel = input_par_dict['Wavemodel']
+            self.wavemodel = input_par_dict['wavemodel']
         
         ## set wbctype
         if 'wbctype' in input_par_dict:
@@ -87,9 +88,9 @@ class XBeachModelSetup():
         """_summary_
 
         Args:
-            xgr (_type_): _description_
-            ygr (_type_): _description_
-            zgr (_type_): _description_
+            xgr (array): x-grid
+            ygr (array): y-grid
+            zgr (array): z-grid
             posdwn (int, optional): _description_. Defaults to 1.
             xori (int, optional): _description_. Defaults to 0.
             yori (int, optional): _description_. Defaults to 0.
@@ -113,7 +114,6 @@ class XBeachModelSetup():
             else:
                 self.xgr = xgr
                 self.zgr = zgr
-
         ## 2D model
         else:
             self.ygr = ygr
@@ -123,7 +123,6 @@ class XBeachModelSetup():
         ##
         self.nx = self.xgr.shape[1] - 1
         self.ny = self.xgr.shape[0] - 1
-        ##
         
         ## 1D
         if ygr is None or ygr.shape[0]==1:
@@ -131,7 +130,7 @@ class XBeachModelSetup():
             self.ny = 0
         else:
             self.fast1D = False 
-        ##
+        ## set values
         self.posdwn = posdwn
         self.xori   = xori
         self.yori   = yori
@@ -167,8 +166,8 @@ class XBeachModelSetup():
 
         Parameters
         ----------
-        nebed : input of sandy layer thickness
-        struct : optional. The default is 1.
+        friction : input of sandy layer thickness
+        friction_layer : optional yes/no. The default is 1.
 
         Returns
         -------
@@ -178,14 +177,16 @@ class XBeachModelSetup():
         self.friction = friction
         self.friction_layer = friction_layer
 
+        # TODO option to specify what kind of bed friction there is: Manning/Chezy or else
+
     def set_wavefriction(self, wavefriction, wavefriction_layer = 1):      
         '''
-        function to set friction layer for the xbeach model
+        function to set wave friction layer for the xbeach model
 
         Parameters
         ----------
-        nebed : input of sandy layer thickness
-        struct : optional. The default is 1.
+        wavefriction : input of sandy layer thickness
+        wavefriction_layer : optional yes/no. The default is 1.
 
         Returns
         -------
@@ -221,10 +222,64 @@ class XBeachModelSetup():
         """        
         pass
 
-    def set_tide(self):
+    def set_wind(self):
         """_summary_
         """        
-        pass
+        pass        
+
+    def set_tide(self, zs0, optional_par_input = {}):
+        """
+        function to set offshore water level boundary conditions for the xbeach model
+
+        Parameters
+        ----------
+        zs0 (array): table of water levels in format [t, zs1, (zs2), (zs3, zs4)]
+        optional_par_input: dict with optional parameter settings: ['tideloc', 'tidetype', 'paulrevere']. If unspecified, tideloc is inferred from zs0.
+
+        Returns
+        -------
+        None.
+        """     
+
+        if np.atleast_1d(zs0).size > 1:
+            self.zs0type = 'list'
+        else:
+            self.zs0type = 'par'
+        ## 
+
+        self.tide_boundary = {}
+
+        if self.zs0type == 'list':
+            self.tide_boundary['zs0file'] = 'tide.txt'
+            optional_par = ['paulrevere', 'tideloc', 'tidetype']
+
+            for item in optional_par_input:
+                if item in optional_par:
+                    self.tide_boundary[item] = optional_par_input[item]
+                else:
+                    assert False, 'invalid tide parameter specified'
+
+            self.tide_boundary['_tidelen'] = zs0.shape[0]
+
+            # if not overruled by a specific par input, infer the tideloc from shape of zs0
+            if not 'tideloc' in optional_par_input:
+                tideloc_inferred = zs0.shape[1]-1
+                if tideloc_inferred in [1, 2, 4]:    
+                    self.tide_boundary['tideloc'] = tideloc_inferred
+                else:
+                    assert False, 'format of zs0 invalid: use either 1, 2 or 4 corners for zs0 specification'
+               
+        elif self.zs0type == 'par':
+            optional_par = []
+            self.tide_boundary['zs0'] = zs0
+
+        else:
+            assert False, 'Wrong zs0 format'
+
+        self.zs0 =  zs0
+
+        # TODO check that zs0file is at least as long as end time of simulation
+
         
     def load_model_setup(self,path):
         """_summary_
@@ -300,7 +355,7 @@ class XBeachModelSetup():
             f.write('%% Grid \n')
             f.write('\n')
             f.write('vardx\t= {}\n'.format(self.vardx).expandtabs(tabnumber))
-            f.write('posdwn\t={}\n'.format(self.posdwn).expandtabs(tabnumber))
+            f.write('posdwn\t= {}\n'.format(self.posdwn).expandtabs(tabnumber))
             f.write('nx\t= {}\n'.format(self.nx).expandtabs(tabnumber))
             f.write('ny\t= {}\n'.format(self.ny).expandtabs(tabnumber))
             f.write('xori\t= {}\n'.format(self.xori).expandtabs(tabnumber))
@@ -312,10 +367,24 @@ class XBeachModelSetup():
             f.write('depfile\t= bed.dep\n'.expandtabs(tabnumber))
             f.write('thetamin\t= {}\n'.format(self.thetamin).expandtabs(tabnumber))
             f.write('thetamax\t= {}\n'.format(self.thetamax).expandtabs(tabnumber))
-            f.write('thetanaut\t= {}\n'.format(self.thetanaut))
+            f.write('thetanaut\t= {}\n'.format(self.thetanaut).expandtabs(tabnumber))
             f.write('dtheta\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
             f.write('dtheta_s\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
             f.write('\n')
+
+            ## tide 
+            if self.zs0type != None:
+                f.write('%% Tide boundary conditions \n')
+                f.write('\n')        
+                if self.zs0type == 'par':
+                    f.write('zs0\t= {}\n'.format())    
+                elif self.zs0type == 'list':
+                    for item in self.tide_boundary:
+                        if item[0] != '_':
+                            f.write('{}\t= {}\n'.format(item, self.tide_boundary[item]).expandtabs(tabnumber))
+                f.write('\n')
+
+                
             
             ## write input vars
             for par_category in self.input_par:
@@ -329,6 +398,8 @@ class XBeachModelSetup():
                 for par in self.input_par[par_category]:
                     f.write('{}\t= {}\n'.format(par,self.input_par[par_category][par]).expandtabs(tabnumber))
                 f.write('\n')
+
+
             ## write output variables
             if '_Output' in self.input_par:
                 f.write('%% Output variables \n')
@@ -343,9 +414,10 @@ class XBeachModelSetup():
     
         ## write grid x
         with open(os.path.join(path,'x.grd'),'w') as f:
+            xgr = np.atleast_2d(self.xgr)
             for ii in range(self.ny+1):
                 for jj in range(self.nx+1):
-                    f.write('{} '.format(self.xgr[ii,jj]))
+                    f.write('{:.3f} '.format(xgr[ii,jj]))
                 f.write('\n')
 
         if not self.ygr is None:
@@ -353,36 +425,51 @@ class XBeachModelSetup():
             with open(os.path.join(path,'y.grd'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
-                        f.write('{} '.format(self.ygr[ii,jj]))
+                        f.write('{:.3f} '.format(self.ygr[ii,jj]))
                     f.write('\n')
 
        ## write dep
         with open(os.path.join(path,'bed.dep'),'w') as f:
+            zgr = np.atleast_2d(self.zgr)
             for ii in range(self.ny+1):
                 for jj in range(self.nx+1):
-                    f.write('{} '.format(self.zgr[ii,jj]))
+                    f.write('{:.3f} '.format(zgr[ii,jj]))
                 f.write('\n')             
                 
         ## write ne-layer
         if self.struct != None:
+            nebed = np.atleast_2d(self.nebed)
             with open(os.path.join(path,'ne_bed.dep'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
-                        f.write('{} '.format(self.nebed[ii,jj]))
+                        f.write('{} '.format(nebed[ii,jj]))
                     f.write('\n')   
-                
+
+        ## write bottom friction layer        
         if self.friction_layer != None:
+            friction = np.atleast_2d(self.friction)
             with open(os.path.join(path,'friction.dep'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
-                        f.write('{} '.format(self.friction[ii,jj]))
+                        f.write('{:.3f} '.format(friction[ii,jj]))
                     f.write('\n')  
-                    
+
+        ## write wave bottom friction layer            
         if self.wavefriction_layer != None:
+            wavefriction = np.atleast_2d(self.wavefriction)
             with open(os.path.join(path,'wavefriction.dep'),'w') as f:
                 for ii in range(self.ny+1):
                     for jj in range(self.nx+1):
-                        f.write('{} '.format(self.wavefriction[ii,jj]))
+                        f.write('{} '.format(wavefriction[ii,jj]))
+                    f.write('\n')   
+
+        ## write tide boundary condition
+         
+        if self.zs0type == 'list':
+            with open(os.path.join(path,'tide.txt'), 'w') as f:
+                for ir in range(self.tide_boundary['_tidelen']):
+                    for ic in range(self.tide_boundary['tideloc'] + 1):
+                        f.write('{} '.format(self.zs0[ir, ic]))
                     f.write('\n')   
 
         ## write figures
@@ -390,7 +477,7 @@ class XBeachModelSetup():
             ## plot and write domain
             self._plotdomain(path)
             ## plot and write wave boundary
-            if self.wbctype=='jonstable' or self.wbctype=='jons':
+            if self.wbctype=='jonstable' or self.wbctype=='parametric':
                 self._plot_boundary(path)
 
     def _plot_boundary(self,save_path=None):
@@ -421,8 +508,8 @@ class XBeachModelSetup():
             plt.xlabel('Time')
             if save_path!=None:
                 plt.savefig(os.path.join(save_path,'jonstable.png'))
-        elif self.wbctype=='jons':
-            print('wbctype=jons cannot be plotted')
+        elif self.wbctype=='parametric':
+            print('wbctype=parametric cannot be plotted')
         else:
             print('Not possible to plot wave boundary')
             
@@ -469,7 +556,7 @@ class XBeachModelSetup():
         thetamin_uv, thetamax_uv = self._make_theta_vectors()
         if self.fast1D==True:
             plt.subplot(2,1,1)
-            plt.plot(np.squeeze(self.xgr),np.squeeze(self.zgr)*-self.posdwn)
+            plt.plot(np.squeeze(self.xgr),np.squeeze(self.zgr)*self.posdwn)
             plt.ylabel('z')
             plt.subplot(2,1,2)
             plt.plot(np.squeeze(self.xgr)[1:],np.diff(np.squeeze(self.xgr)))
@@ -477,7 +564,7 @@ class XBeachModelSetup():
             plt.ylabel('dx')
         else:
             plt.subplot(2,2,1)
-            plt.pcolor(self.xgr,self.ygr,self.zgr*-self.posdwn)
+            plt.pcolor(self.xgr,self.ygr,self.zgr*self.posdwn)
             plt.ylabel('y')
             plt.colorbar()
             plt.axis('equal')
@@ -498,7 +585,7 @@ class XBeachModelSetup():
 
             plt.subplot(2,2,3)
             [X_world,Y_world] = rotate_grid(self.xgr,self.ygr,np.deg2rad(self.alfa))
-            plt.pcolor(X_world+self.xori,Y_world+self.yori,self.zgr*-self.posdwn)
+            plt.pcolor(X_world+self.xori,Y_world+self.yori,self.zgr*self.posdwn)
             plt.xlabel('x')
             plt.ylabel('y')
             plt.axis('equal')
