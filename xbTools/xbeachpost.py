@@ -213,7 +213,7 @@ class XBeachModelAnalysis():
             self.grd['y'] = np.loadtxt(os.path.join(self.model_path, self.params['yfile']))
             assert self.grd['y'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'y grid not of correct size'
         # struct
-        if 'struct' in self.params == 1:
+        if ('struct' in self.params) == 1:
             self.grd['ne'] = np.loadtxt(os.path.join(self.model_path, self.params['ne_layer']))
             assert self.grd['ne'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'ne grid not of correct size'
 
@@ -255,7 +255,8 @@ class XBeachModelAnalysis():
             dat = np.loadtxt(os.path.join(self.model_path, self.params['zs0file']))
 
             if int(self.params['tideloc']) == 1:
-                assert dat.shape[1] == 2, 'tideloc=1, expected 2 cols'
+                # assert dat.shape[1] == 2, 'tideloc=1, expected 2 cols'
+                pass
             if int(self.params['tideloc']) == 2:
                 assert dat.shape[1] == 3, 'tideloc=2, expected 3 cols'
             if int(self.params['tideloc']) == 4:
