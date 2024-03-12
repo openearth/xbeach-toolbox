@@ -20,6 +20,8 @@ from scipy.interpolate import interp2d
 import xbTools as xb
 import warnings
 import re
+# toolbox specific import
+from .general.geometry import rotate_grid
 
 class XBeachModelAnalysis():
     '''
@@ -52,6 +54,12 @@ class XBeachModelAnalysis():
         self.plot_km_coords = False
         self.AOI = []
         self.globalstarttime = None
+
+        self.vector_vars = ['u', 'v', 'ue', 've', 'Subg', 'Svbg', 'Susg', 'Svsg',
+                          'u_mean', 'v_mean', 'ue_mean', 've_mean', 'Subg_mean', 'Svbg_mean', 'Susg_mean', 'Svsg_mean'
+                          'u_max', 'v_max', 'ue_max', 've_max', 'Subg_max', 'Svbg_max', 'Susg_max', 'Svsg_max'
+                          'u_min', 'v_min', 'ue_min', 've_min', 'Subg_min', 'Svbg_min', 'Susg_min', 'Svsg_min']
+
 
     def get_metadata(self):
         '''
@@ -313,7 +321,7 @@ class XBeachModelAnalysis():
             self.var['globalx'] = x
             self.var['globaly'] = y
 
-        self.var['gridang'] = np.arctan2(y[0, 0] - y[-1, 0], x[0, 0] - x[-1, 0])
+        self.var['gridang'] = np.arctan2(y[0, -1] - y[0, 0], x[0, -1] - x[0, 0]) # np.pi/2+np.arctan2(y[0, -1] - y[0, 0], x[0, -1] - x[0, 0]) # np.arctan2(y[0, 0] - y[-1, 0], x[0, 0] - x[-1, 0])
 
         # global variable time
         if self.globalstarttime is None:
@@ -383,12 +391,12 @@ class XBeachModelAnalysis():
         self.var['cross'] = path_distance(x[0, :], y[0, :])
         self.var['along'] = path_distance(x[:, 0], y[:, 0])
 
-        self.var['localy'], self.var['localx'] = np.meshgrid(self.var['cross'], self.var['along'])
-        self.var['localx'] = np.flipud(self.var['localx'])  # to plot
-
-        if self.plot_km_coords:
-            self.var['localx'] = self.var['localx']/1e3
-            self.var['localy'] = self.var['localy']/1e3
+        # self.var['localy'], self.var['localx'] = np.meshgrid(self.var['cross'], self.var['along'])
+        # self.var['localx'] = np.flipud(self.var['localx'])  # to plot
+        lx, ly = rotate_grid(self.var['globalx'], self.var['globaly'], self.var['gridang'])
+        
+        self.var['localx'] = lx - lx[0,0]
+        self.var['localy'] = ly - ly[0,0]        
 
         if self.params['npointvar'] > 0: 
             # point output coordinates in local coordinates
@@ -634,11 +642,11 @@ class XBeachModelAnalysis():
 
         if self.plot_localcoords:
             if self.plot_km_coords:
-                ax.set_xlabel('along shore [km]')
-                ax.set_ylabel('cross shore [km]')
+                ax.set_xlabel('cross shore [km]')
+                ax.set_ylabel('along shore [km]')
             else:
-                ax.set_xlabel('along shore [m]')
-                ax.set_ylabel('cross shore [m]')
+                ax.set_xlabel('cross shore [m]')
+                ax.set_ylabel('along shore [m]')
         else:
             if self.plot_km_coords:
                 ax.set_xlabel('x [km]')
@@ -670,14 +678,46 @@ class XBeachModelAnalysis():
             it = len(self.var['globaltime']) - 1
         assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
 
-        data = self.var[var][it, :, :]
-        if label is None:
-            try:
-                label = str(var)  + ' [' + self.units[var] + ']'
-            except:
-                print('unit of {} missing in units'.format(var))
-                label = str(var)
-            
+        # data = self.var[var][it, :, :]
+
+        if (self.plot_localcoords is False) or (not (var in self.vector_vars)):
+            if len(self.var[var].shape)==4:
+                if itype is None:
+                    print('using first sed type for printing. For others, set itype>=1')
+                    itype = 0
+                data = self.var[var][it, itype, :, :]
+            else:
+                data = self.var[var][it, :, :]
+
+        else:
+            print('this variable is rotated to gridori in the postprocessing scripts')
+            dat1, dat2 = self._get_var_vector_pair(var)
+            if len(self.var[var].shape)==4:
+                if itype is None:
+                    print('using first sed type for printing. For others, set itype>=1')
+                    itype = 0
+                dat1 = dat1[it, itype, :, :]
+                dat2 = dat2[it, itype, :, :]
+                
+            else:
+                dat1 = dat1[it, :, :]
+                dat2 = dat2[it, :, :]
+
+            data_cross, data_along = rotate_grid(dat1.data, dat2.data, self.var['gridang'])
+
+            # select the cross- or alongshore component
+            if 'u' in var: 
+                data = np.where(~dat1.mask, data_cross, np.nan)  # make 0d again after rotation operation
+            else:
+                data = np.where(~dat1.mask, data_along, np.nan)  # make 0d again after rotation operation    
+
+            if label is None:
+                try:
+                    label = str(var)  + ' [' + self.units[var] + ']'
+                except:
+                    print('unit of {} missing in units'.format(var))
+                    label = str(var)
+
 
         fig, ax = self._fig_map_var(data, label, figsize, figax=figax, **kwargs)
             
@@ -698,6 +738,62 @@ class XBeachModelAnalysis():
 
         return fig, ax
 
+    def _get_var_vector_pair(self, var):
+
+        if var in ['ue', 've']: 
+            dat1 = self.get_modeloutput('ue')
+            dat2 = self.get_modeloutput('ve')
+        elif var in ['u', 'v']:
+            dat1 = self.get_modeloutput('u')
+            dat2 = self.get_modeloutput('v')
+        elif var in ['Subg', 'Svbg']:
+            dat1 = self.get_modeloutput('Subg')
+            dat2 = self.get_modeloutput('Svbg')
+        elif var in ['Susg', 'Svsg']:
+            dat1 = self.get_modeloutput('Susg')
+            dat2 = self.get_modeloutput('Svsg')
+
+        elif var in ['ue_mean', 've_mean']: 
+            dat1 = self.get_modeloutput('ue_mean')
+            dat2 = self.get_modeloutput('ve_mean')
+        elif var in ['u_mean', 'v_mean']:
+            dat1 = self.get_modeloutput('u_mean')
+            dat2 = self.get_modeloutput('v_mean')
+        elif var in ['Subg_mean', 'Svbg_mean']:
+            dat1 = self.get_modeloutput('Subg_mean')
+            dat2 = self.get_modeloutput('Svbg_mean')
+        elif var in ['Susg_mean', 'Svsg_mean']:
+            dat1 = self.get_modeloutput('Susg_mean')
+            dat2 = self.get_modeloutput('Svsg_mean')
+
+        elif var in ['ue_max', 've_max']: 
+            dat1 = self.get_modeloutput('ue_max')
+            dat2 = self.get_modeloutput('ve_max')
+        elif var in ['u_max', 'v_max']:
+            dat1 = self.get_modeloutput('u_max')
+            dat2 = self.get_modeloutput('v_max')
+        elif var in ['Subg_max', 'Svbg_max']:
+            dat1 = self.get_modeloutput('Subg_max')
+            dat2 = self.get_modeloutput('Svbg_max')
+        elif var in ['Susg_max', 'Svsg_max']:
+            dat1 = self.get_modeloutput('Susg_max')
+            dat2 = self.get_modeloutput('Svsg_max')
+
+        if var in ['ue_min', 've_min']: 
+            dat1 = self.get_modeloutput('ue_min')
+            dat2 = self.get_modeloutput('ve_min')
+        elif var in ['u_min', 'v_min']:
+            dat1 = self.get_modeloutput('u_min')
+            dat2 = self.get_modeloutput('v_min')
+        elif var in ['Subg_min', 'Svbg_min']:
+            dat1 = self.get_modeloutput('Subg_min')
+            dat2 = self.get_modeloutput('Svbg_min')
+        elif var in ['Susg_min', 'Svsg_min']:
+            dat1 = self.get_modeloutput('Susg_min')
+            dat2 = self.get_modeloutput('Svsg_min')
+
+        return dat1, dat2
+    
     def fig_map_diffvar(self, var, label, it0=0, itend=np.inf, clim=None, figsize=None, **kwargs):
         """_summary_
 
@@ -726,9 +822,51 @@ class XBeachModelAnalysis():
             itend = len(self.var['globaltime']) - 1
         assert itend <= len(self.var['globaltime']) - 1, 'itend should be <= {}'.format(len(self.var['globaltime']) - 1)
 
-        var0 = self.var['zb'][it0, :, :]
-        varend = self.var['zb'][itend, :, :]
+        var0 = self.var[var][it0, :, :]
+        varend = self.var[var][itend, :, :]
 
+        if (self.plot_localcoords is False) or (not (var in self.vector_vars)):
+            if len(self.var[var].shape)==4:
+                if itype is None:
+                    print('using first sed type for printing. For others, set itype>=1')
+                    itype = 0
+                var0 = self.var[var][it0, itype, :, :]
+                varend = self.var[var][itend, itype, :, :]
+            else:
+                var0 = self.var[var][it0, :, :]
+                varend = self.var[var][itend, :, :]
+
+        else:
+            print('this variable is rotated to gridori in the postprocessing scripts')
+            dat1, dat2 = self._get_var_vector_pair(var)
+            if len(self.var[var].shape)==4:
+                if itype is None:
+                    print('using first sed type for printing. For others, set itype>=1')
+                    itype = 0
+                var01 = dat1[it0, itype, :, :]
+                varend1 = dat1[itend, itype, :, :]    
+
+                var02 = dat2[it0, itype, :, :]
+                varend2 = dat2[itend, itype, :, :]    
+                
+            else:
+                var01 = dat1[it0, :, :]
+                varend1 = dat1[itend, :, :]    
+
+                var02 = dat2[it0, :, :]
+                varend2 = dat2[itend, :, :]    
+
+            data_cross1, data_along1 = rotate_grid(var01.data, var02.data, self.var['gridang'])
+            data_cross2, data_along2 = rotate_grid(varend1.data, varend2.data, self.var['gridang'])
+
+            # select the cross- or alongshore component
+            if 'u' in var: 
+                var0 = np.where(~var01.mask, data_cross1, np.nan).flatten()  # make 0d again after rotation operation
+                varend = np.where(~var01.mask, data_cross2, np.nan).flatten()  # make 0d again after rotation operation
+            else:
+                var0 = np.where(~var01.mask, data_along1, np.nan).flatten()  # make 0d again after rotation operation
+                varend = np.where(~var01.mask, data_along2, np.nan).flatten()  # make 0d again after rotation operation
+        
         fig, ax = self._fig_map_var(varend - var0, label, figsize, **kwargs)
 
         #make title
@@ -745,7 +883,9 @@ class XBeachModelAnalysis():
             plt.savefig(os.path.join(self.model_path, 'fig', 'difmap_{}_it_{}-{}.png'.format(var, itend, it0)), dpi=200)
         return fig, ax
 
-    def fig_cross_var(self,var, it, iy=None, coord=None, plot_ref_bathy=True, zmin=-25):
+
+    
+    def fig_cross_var(self,var, it, iy=None, itype=None, coord=None, plot_ref_bathy=True, figax = None, zmin=-25):
         """_summary_
 
         Args:
@@ -765,7 +905,7 @@ class XBeachModelAnalysis():
             self.load_modeloutput(var)
         except:
             print('var not found as output specified in params. Will try to continue to see if computed earlier')
-        
+        self.load_modeloutput('zb')
 
         x = self.var['globalx']
         y = self.var['globaly']
@@ -774,12 +914,47 @@ class XBeachModelAnalysis():
         if iy is None:
             iy, _ = np.unravel_index(((x - coord[0]) ** 2 + (y - coord[1]) ** 2).argmin(), x.shape)
 
-        data = self.var[var][it, iy, :]
+        if (self.plot_localcoords is False) or (not (var in self.vector_vars)):
+            if len(self.var[var].shape)==4:
+                if itype is None:
+                    print('using first sed type for printing. For others, set itype>=1')
+                    itype = 0
+                data = self.var[var][it, itype, iy, :]
+            else:
+                data = self.var[var][it, iy, :]
+
+        else:
+            print('this variable is rotated to gridori in the postprocessing scripts')
+            dat1, dat2 = self._get_var_vector_pair(var)
+            if len(self.var[var].shape)==4:
+                if itype is None:
+                    print('using first sed type for printing. For others, set itype>=1')
+                    itype = 0
+                dat1 = dat1[it, itype, iy, :]
+                dat2 = dat2[it, itype, iy, :]
+                
+            else:
+                dat1 = dat1[it, iy, :]
+                dat2 = dat2[it, iy, :]
+
+            data_cross, data_along = rotate_grid(dat1.data, dat2.data, self.var['gridang'])
+
+            # select the cross- or alongshore component
+            if 'u' in var: 
+                data = np.where(~dat1.mask, data_cross, np.nan).flatten()  # make 0d again after rotation operation
+            else:
+                data = np.where(~dat1.mask, data_along, np.nan).flatten()  # make 0d again after rotation operation       
+            
+        z = self.var['zb'][it, iy, :]
         cross = self.var['cross']
 
-        fig, ax1 = plt.subplots(figsize=[5, 3])
-
-        ax1.plot(cross, data, 'k.-')
+        if figax is None:
+            fig, ax1 = plt.subplots(figsize=[5, 3])
+            ax1.plot(cross, data, 'k.-')
+        else:
+            fig, ax1 = figax[0], figax[1]
+            ax1.plot(cross, data, '.-')
+       
 
         if self.plot_km_coords:
             ax1.set_xlabel('cross shore [km]')
@@ -787,14 +962,11 @@ class XBeachModelAnalysis():
             ax1.set_xlabel('cross shore [m]')
 
         if plot_ref_bathy:
-            self.load_modeloutput('zb')
-            z = self.var['zb'][it, iy, :]
-
             ax2 = ax1.twinx()
             ax1.set_zorder(ax2.get_zorder() + 1)  # move ax in front
             ax1.patch.set_visible(False)
 
-            ax2.fill_between(cross, z, -25, color='lightgrey')
+            ax2.fill_between(cross, z, zmin, color='lightgrey')
             ax2.set_ylim([zmin, z.max() + 1])
             ax2.set_ylabel('$z_b$ [m+NAP]', color='lightgrey')
 
@@ -814,6 +986,17 @@ class XBeachModelAnalysis():
                         dpi=200)
 
         return fig, ax
+    
+    def set_var(self, varname, units, var):
+        """_summary_
+
+        Args:
+            varname (_type_): _description_
+            var (_type_): _description_
+        """
+        self.var[varname] = var
+        self.units[varname] = units
+        return
 
     def fig_profile_change(self, iy=None, coord=None):
         """_summary_

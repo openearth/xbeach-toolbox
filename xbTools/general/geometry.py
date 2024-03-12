@@ -33,6 +33,11 @@ def rotate(x, y, theta, origin = [0,0]):
 
     '''
     x0, y0 = origin
+    
+    # also make it work on 1-d grids
+    x = np.atleast_2d(x)
+    y = np.atleast_2d(y)
+
     ny, nx = x.shape
     coords = np.vstack((x.flatten()-x0, y.flatten()-y0))
 
@@ -64,7 +69,15 @@ def rotate_grid(xgr, ygr, theta):
         rotated grid.
 
     '''
+
+    if isinstance(xgr, np.ma.MaskedArray):
+        xgr = xgr.data
+    if isinstance(ygr, np.ma.MaskedArray):
+        ygr = ygr.data 
     
+    xgr = np.atleast_2d(xgr)
+    ygr = np.atleast_2d(ygr)
+
     ny, nx = xgr.shape
     coords = np.vstack((xgr.reshape(-1), ygr.reshape(-1)))
     rotMatrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
