@@ -56,8 +56,8 @@ class XBeachModelAnalysis():
         self.globalstarttime = None
 
         self.vector_vars = ['u', 'v', 'ue', 've', 'Subg', 'Svbg', 'Susg', 'Svsg',
-                          'u_mean', 'v_mean', 'ue_mean', 've_mean', 'Subg_mean', 'Svbg_mean', 'Susg_mean', 'Svsg_mean'
-                          'u_max', 'v_max', 'ue_max', 've_max', 'Subg_max', 'Svbg_max', 'Susg_max', 'Svsg_max'
+                          'u_mean', 'v_mean', 'ue_mean', 've_mean', 'Subg_mean', 'Svbg_mean', 'Susg_mean', 'Svsg_mean',
+                          'u_max', 'v_max', 'ue_max', 've_max', 'Subg_max', 'Svbg_max', 'Susg_max', 'Svsg_max',
                           'u_min', 'v_min', 'ue_min', 've_min', 'Subg_min', 'Svbg_min', 'Susg_min', 'Svsg_min']
 
 
@@ -885,7 +885,7 @@ class XBeachModelAnalysis():
 
 
     
-    def fig_cross_var(self,var, it, iy=None, itype=None, coord=None, plot_ref_bathy=True, figax = None, zmin=-25):
+    def fig_cross_var(self,var, it, iy=None, itype=None, coord=None, plot_ref_bathy=True, figax = None, zmin=-25, ylim=None, fmt='.-'):
         """_summary_
 
         Args:
@@ -909,7 +909,10 @@ class XBeachModelAnalysis():
 
         x = self.var['globalx']
         y = self.var['globaly']
-        t = self.var['globaltime'][it]
+        if '_mean' in var:
+            t = self.var['meantime'][it]
+        else:
+            t = self.var['globaltime'][it]
 
         if iy is None:
             iy, _ = np.unravel_index(((x - coord[0]) ** 2 + (y - coord[1]) ** 2).argmin(), x.shape)
@@ -945,15 +948,14 @@ class XBeachModelAnalysis():
             else:
                 data = np.where(~dat1.mask, data_along, np.nan).flatten()  # make 0d again after rotation operation       
             
-        z = self.var['zb'][it, iy, :]
-        cross = self.var['cross']
+        cross = self.var['cross']     
 
         if figax is None:
             fig, ax1 = plt.subplots(figsize=[5, 3])
             ax1.plot(cross, data, 'k.-')
         else:
             fig, ax1 = figax[0], figax[1]
-            ax1.plot(cross, data, '.-')
+            ax1.plot(cross, data, fmt)
        
 
         if self.plot_km_coords:
@@ -962,6 +964,14 @@ class XBeachModelAnalysis():
             ax1.set_xlabel('cross shore [m]')
 
         if plot_ref_bathy:
+
+            if '_mean' in var:
+                itz = np.where(self.var['globaltime']>=t)[0][0]
+            else:
+                itz = it
+
+            z = self.var['zb'][itz, iy, :]
+
             ax2 = ax1.twinx()
             ax1.set_zorder(ax2.get_zorder() + 1)  # move ax in front
             ax1.patch.set_visible(False)
@@ -975,6 +985,10 @@ class XBeachModelAnalysis():
             ax = ax1
 
         ax1.set_xlim([cross.min(), cross.max()])
+
+        if not ylim is None:
+            ax1.set_ylim(ylim)
+
         ax1.set_ylabel(var + ' [' + self.units[var] + ']', color='k')
         ax1.set_title('time: {}'.format(t))
         plt.tight_layout()
@@ -986,7 +1000,7 @@ class XBeachModelAnalysis():
                         dpi=200)
 
         return fig, ax
-    
+        
     def set_var(self, varname, units, var):
         """_summary_
 
@@ -998,7 +1012,7 @@ class XBeachModelAnalysis():
         self.units[varname] = units
         return
 
-    def fig_profile_change(self, iy=None, coord=None):
+    def fig_profile_change(self, it=-1, iy=None, coord=None, zmin=-25, zmax=12):
         """_summary_
 
         Args:
@@ -1031,21 +1045,21 @@ class XBeachModelAnalysis():
         plt.plot(cross, np.nanmax(zs, axis=0)[iy, :], color='blue', label='zs-max')
         plt.plot(cross, np.nanmin(zs, axis=0)[iy, :], color='royalblue', label='zs-min')
         plt.plot(cross, zb[0, iy, :], color='k', label='pre')
-        plt.plot(cross, zb[-1, iy, :], color='r', label='post')
+        plt.plot(cross, zb[it, iy, :], color='r', label='post')
 
         if 'struct' in self.params: # check if struct is in params
             if int(self.params['struct']) == 1:
                 plt.fill_between(cross, zb[0, iy, :], ne[iy, :], color='lightgrey', label='erodible')
-                plt.fill_between(cross, ne[iy, :], -25, color='grey', label='non-erodible')
+                plt.fill_between(cross, ne[iy, :], zmin, color='grey', label='non-erodible')
         else:
-            plt.fill_between(cross, zb[0, iy, :], -25, color='lightgrey', label='erodible')
+            plt.fill_between(cross, zb[0, iy, :], zmin, color='lightgrey', label='erodible')
 
         plt.title('profile iy = {}'.format(int(iy)))
         plt.legend()
         plt.xlabel('cross-shore [m]')
         plt.ylabel('[m+NAP]')
         plt.xlim([cross[0], cross[-1]])
-        plt.ylim([-25, 12])
+        plt.ylim([zmin, zmax])
         plt.grid(linestyle=':', color='grey', linewidth=0.5)
 
         plt.tight_layout()
