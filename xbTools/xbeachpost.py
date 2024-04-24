@@ -238,7 +238,13 @@ class XBeachModelAnalysis():
             self.waves_boundary['mainang'] = dat[:, 2]
             self.waves_boundary['gammajsp'] = dat[:, 3]
             self.waves_boundary['s'] = dat[:, 4]
-            self.waves_boundary['time'] = np.cumsum(dat[:, 5])
+            if self.globalstarttime is None:
+                self.waves_boundary['time'] = np.cumsum(dat[:, 5])
+            else:
+                loctime = np.cumsum(dat[:, 5])-dat[0, 5]
+                globtime = np.array([np.timedelta64(int(x), 's') for x in loctime]) + self.globalstarttime
+                self.waves_boundary['time'] = globtime
+
         elif self.params['wbctype'] == 'jons':
             print('not yet written')
             pass
