@@ -69,8 +69,8 @@ def wavecelerity(Tp, d, g=9.81):
 
     '''
     
-    k       = dispersion(2*np.pi/Tp, d, g)
-    n       = 0.5 * (1 + 2 * k * d * np.sinh(2 * k * d))
+    k       = dispersion(2*np.pi/Tp, d, max_error = 0.0001, g = g)
+    n       = 0.5 * (1 + 2 * k * d / np.sinh(2 * k * d))
     c       = g * Tp/(2 * np.pi) * np.tanh(k * d)
     cg      = n * c
     return cg, n
