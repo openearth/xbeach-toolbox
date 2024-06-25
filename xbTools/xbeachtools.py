@@ -18,13 +18,16 @@ import matplotlib.pyplot as plt
 from .general.geometry import rotate_grid
 from .general.deg2uv import deg2uv
 
+# Dictionary functions
+from xbTools.general.file_utils import write_2d_arr_2_file
+
 class XBeachModelSetup():
     '''
     XBeach model setup class
     ''' 
     
-    def __init__(self,fname):
-        self.fname      = fname
+    def __init__(self,file_name):
+        self.file_name      = file_name
         ## by default set wbctype and wavemodel to None
         self.wbctype    = None
         self.wavemodel  = None
@@ -34,21 +37,28 @@ class XBeachModelSetup():
         self.model_path = None
         self.friction_layer = None
         self.wavefriction_layer = None
+
+        # WaveHello Added these 
+        self.wavefriction = None
+        self.friction = None
+        self.nebed = None
+
         self.struct = None
         
-    def __repr__(self):
+    def __str__(self):
         """_summary_
 
         Returns:
-            _type_: _description_
+            file_name (string): Name of the xBeach model file
         """        
-        return self.fname
+        return self.file_name
     
     def set_params(self,input_par_dict):
-        """_summary_
+        """
+        Sets the wavemodel and any of the parameters in the par.json file (?) for the model
 
         Args:
-            input_par_dict (_type_): _description_
+            input_par_dict (dict): dict of input param flags and the associated values
         """        
         ## set wavemodel. Default is Surfbeat
         if 'wavemodel' not in input_par_dict:
@@ -61,28 +71,37 @@ class XBeachModelSetup():
         if 'wbctype' in input_par_dict:
             self.wbctype = input_par_dict['wbctype'] 
 
-
         ## load parameters and categories
+        # Open the par.json file in read mode
         f           = open(os.path.join(os.path.dirname(__file__), 'par.json'),'r')
+
+        # Read the json file and store it as a python dict
         par_dict    = json.loads(f.read())
+        
         ## create input dict
         self.input_par = {}
+
+        # Init 'par' key as a nested dict
         self.input_par['par'] = {}
+
         ## loop over input parameters 
-        
         for input_par in input_par_dict:
             value_added = False
-            ## loop over categories
+
+            ## loop over categories from the par.json file
             for par_category in par_dict:
                 ## if input parameter is in category, add parameter
                 if input_par in par_dict[par_category]:
                     ## create category if not exist
                     if not par_category in self.input_par:
                         self.input_par[par_category] = {}
+                        
                     ## add parameter and value                    
                     self.input_par[par_category][input_par] = input_par_dict[input_par]
                     value_added = True
+
             if not value_added:
+                # Add all parameters that don't match a key in the par.json file to this new dict
                 self.input_par['par'][input_par] = input_par_dict[input_par]
             
     def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0,alfa=0, thetamin=-90, thetamax = 90, thetanaut = 0, dtheta=10, dtheta_s=10):
@@ -197,27 +216,173 @@ class XBeachModelSetup():
         self.wavefriction = wavefriction
         self.wavefriction_layer = wavefriction_layer
 
-    def set_waves(self,wbctype, input_struct):
-        """_summary_
+    @staticmethod
+    def _get_wbctype_required_params(wbctype):
+        """
+        Returns the required inputs for the selcted wbctype.
+        NOTE: This is only for the new boundary conditions
+        
+        Inputs:
+            wbctype (string): One of the selected instat boundary condtion types
 
+            Possible inputs for wbctype are: 
+
+            swan: XBeach can read standard SWAN 2D variance density or energy density output files (+.sp2 files) as specified in the SWAN v40.51 manual. 
+            
+            vardens: 2D spectral information that is not in SWAN format can be provided using a formatted variance density spectrum file
+            
+            off: 
+            
+            jonstable:  Each line in the spectrum definition file contains a parametric definition of a spectrum, 
+                         like in a regular JONSWAP definition file, plus the duration for which that spectrum is used during the simulation.
+            
+            reuse: makes XBeach reuse wave time series that were generated during a previous simulation. 
+                   This can be a simulation using the same or a different model as long as the computational grids are identical
+            
+            ts_1: First-order time series of waves (keyword insat = ts_1). 
+                  XBeach will calculate the bound long wave based on the theory of [LHS64]).
+            
+            ts_2: Second-order time series of waves (keyword insat = ts_2). 
+                  The bound long wave is specified by the user via a long wave elevation.
+            
+            
+            ts_nonh: Requires a boundary condition file that contains free surface elevations and velocities (both in u and v).
+                     Possible input values are z (surf. elevation), t, u, v, w, dU, dV, q (discharge), dq
+
+            parametric: 
+        """
+
+        # Using False to note that the required parameters haven't been included here yet
+        wbctype_options = {'swan'        : False,
+                          'vardens'      : False,
+                           'off'         : False,
+                           'jonstable'   : ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc'],
+                           'resuse'      : False, 
+                           'ts_1'        : False, 
+                           'ts_2'        : False, 
+                           'ts_nonh'     : ["boun_U_dict"],
+                           'parametric': ['Hm0','Tp','mainang','gammajsp','s','fnyq']
+                           }
+
+        try:
+            required_params = wbctype_options[wbctype]
+        except KeyError as error:
+            raise KeyError("Input: {} is not an option for wbctype conditions.\
+                           Possible options are: {}".format(wbctype, wbctype_options.keys()))
+        
+        if required_params is False:
+            raise ValueError(" Option is valid but, writing {} not implemented yet".format(wbctype))
+        
+        return required_params
+    
+    @staticmethod
+    def _get_instat_required_params(instat_type):
+        """
+        Returns the required inputs for the input boundary condition
+
+        NOTE: This is only for the old boundary condition type - instat
+
+        Inputs:
+            instat_type (string): One of the selected instat boundary condtion types
+
+            Possible inputs for instat_type are:
+            bichrom: 
+
+            ts_1: First-order time series of waves (keyword insat = ts_1). 
+                  XBeach will calculate the bound long wave based on the theory of [LHS64]).
+            
+            ts_2: Second-order time series of waves (keyword insat = ts_2). 
+                  The bound long wave is specified by the user via a long wave elevation.
+            
+            jons : A JONSWAP wave spectrum is parametrically defined in a file that is referenced using the bcfile keyword. 
+                  This file contains a single parameter per line in arbitrary order.
+            
+            swan: XBeach can read standard SWAN 2D variance density or energy density output files (+.sp2 files) as specified in the SWAN v40.51 manual. 
+            
+            vardens: 2D spectral information that is not in SWAN format can be provided using a formatted variance density spectrum file
+            
+            reuse: makes XBeach reuse wave time series that were generated during a previous simulation. 
+                   This can be a simulation using the same or a different model as long as the computational grids are identical
+            
+            ts_nonh: Requires a boundary condition file that contains free surface elevations and velocities (both in u and v).
+                     Possible input values are z (surf. elevation), t, u, v, w, dU, dV, q (discharge), dq
+            off: 
+            stat_table: Only in case of insat = stat_table the time-varying stationary wave boundary conditions are fully described
+                       in an external file referenced by the bcfile keyword.
+            jonstable:  Each line in the spectrum definition file contains a parametric definition of a spectrum, 
+                         like in a regular JONSWAP definition file, plus the duration for which that spectrum is used during the simulation.
+        """
+
+        # Using False to note that the required parameters haven't been included here yet
+        instat_type_options = {
+                                'bichrom'     : False,
+                                'ts_1'        : False, 
+                                'ts_2'        : False, 
+                                'jons'        : False,
+                                'swan'        : False,
+                                'vardens'     : False,
+                                'resuse'      : False, 
+                                'ts_nonh'     : ["boun_U_dict"],
+                                'off'         : False,
+                                'stat_table'  : ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc'],
+                                'jonstable '  : ['Hm0','Tp','mainang','gammajsp','s','fnyq']
+                                }
+
+        try:
+            required_params = instat_type_options[instat_type]
+        except KeyError as error:
+            raise KeyError("Input: {} is not an option for instat_type conditions.\
+                           Possible options are: {}".format(instat_type, instat_type_options.keys()))
+        
+        if required_params is False:
+            raise ValueError(" Option is valid but, writing {} not implemented yet".format(instat_type))
+        
+        return required_params
+
+    def set_waves(self, wbctype, input_struct, instat_bc = False):
+        """
+
+        Gets the required inputs for the selected boundary condition and stores the values in a dict for 
+        later output. 
+   
         Args:
-            wbctype (_type_): _description_
-            input_struct (_type_): _description_
+            wbctype (string)   : String input that selects one of the boundary condition options
+            input_struct (dict): Dict contains the information
+            instat_bc (bool): Flag for if the old boundary conditions should be used (Defaults to False)
+        
+        Calls:
+            _get_wbctype_required_params: To get the required params for the wbctype boundary conditions
+            _get_instat_required_params : To get the required params for the instat boundary conditions
+
+        See the called functions for more information on the boundary conditions
         """        
         self.wbctype = wbctype
-        ##
-        if wbctype=='jonstable':
-            required_par = ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc']
-        elif wbctype=='parametric':
-            required_par = ['Hm0','Tp','mainang','gammajsp','s','fnyq']
-        else:
-            assert False, 'Wrong wbctype'
         
+        # Get the thr requried input parameters
+
+        if not instat_bc:
+            # Use the wbctype conditions
+            required_par = self._get_wbctype_required_params(wbctype)
+
+        elif instat_bc:
+            # Use the instat conditions
+            required_par = self._get_instat_required_params(wbctype)
+
+        # Store the required parameters for later usage
+        self.required_wbc_params = required_par
+
+        # Init dict to hold the waves_boundary conditions
         self.waves_boundary  = {}
+                            
+        # Loop over the required parameters...
         for item in required_par:
-            assert item in input_struct, '{} missing'.format(item)
-            self.waves_boundary[item] =  input_struct[item]
+            # Check that the required param is in the input_struct
+            if item not in input_struct:
+                raise KeyError("Required parameter: {} isn't found in input_struct. Required parameters are: {}".format(item, required_par))
             
+            # If param is in input string add it to waves_boundary dict for later output
+            self.waves_boundary[item] =  input_struct[item]
+        
     def set_vegetation(self):
         """_summary_
         """        
@@ -281,7 +446,6 @@ class XBeachModelSetup():
 
         # TODO check that zs0file is at least as long as end time of simulation
 
-        
     def load_model_setup(self,path):
         """_summary_
 
@@ -291,181 +455,339 @@ class XBeachModelSetup():
         ## todo
         pass    
 
+    def _write_boun_U_file(self, path, boun_U_dict):
+        """
+        Writes the boundary conditon file that is required for ts_nonh models
+        
+        Inputs:
+            self:
+            path (string)     : Path to where the file should be written
+            boun_U_dict (dict): Dictionary that contains the data needed to make the boun_U.bcf
+            file_name (string): Name of the boun_U file. This shouldn't need to change but just in case
+        
+        Below is an example of what the boun_U_dict should contain
+        boun_U_dict = {"make_file": "Boolean",
+                       "file_name": "boun_U.bcf",
+                       "dimension": "scalar or vector",
+                       "variable_dict": {
+                           "t" : "time array",
+                           "U" : "U-velocity data",
+                           "V" : "V-Velocity data",
+                           "W" : "W-Velocity data",
+                           "dU": "dU data",
+                           "dV": "dV data",
+                           "q" : "q data",
+                           "dq": "dq data"
+                       }         
+            }
+
+        Info:
+            make_file (string)  : Used to determine if the boun_U should be created
+            file_name (string)  : Name of the boun_U.bcf file
+            variable_dict (dict): Dictionary of variable names that xBeach expects and the associated data.
+                                  NOTE: Not all of the variables have to be provided the above is just an example 
+                                  of what could happen.
+
+        """
+        
+        variable_dict = boun_U_dict["variable_dict"]
+
+        # Make a list of the allowed variables names
+        allowed_variable_names = ['z','zs','t', 'u', 'v', 'w','du', 'dv', 'q', 'dq']
+
+        # Get the variable names
+        variable_names = list(boun_U_dict["variable_dict"].keys())
+
+        # Convert them to lower case
+        lowercase_variables = [item.lower() for item in variable_names]
+
+        # Check that all the variables are in the name
+        mask_list = [item in allowed_variable_names for item in lowercase_variables]
+
+        # Check if there any input variables that aren't allowed
+        if not all(mask_list):
+            # Apply the mask to the inputs and get the input vars that aren't allowed
+            not_allowed_vars = [item for item, mask in zip(variable_names, mask_list) if not mask]
+
+            raise ValueError("Input variable(s): {} are not allowed. \
+                             Allowed variables are: {}".format(not_allowed_vars, allowed_variable_names))
+        
+        # Now that the variables are checked generate the file
+        file_path =  os.path.join(path, boun_U_dict["file_name"])
+
+        # Loop over the data and stack it together
+        data = np.column_stack([variable_dict[key] for key in variable_dict.keys()])
+
+        string_variables = " ".join(variable_names)
+        num_variables = len(variable_names)
+
+        # Write the header and the data to a file
+        with open(file_path, 'w') as file:
+            file.write("{}\n".format(boun_U_dict["dimension"]))
+            file.write("{}\n".format(num_variables))
+            file.write("{}\n".format(string_variables))
+            np.savetxt(file, data, delimiter=' ', fmt='%10.5f')
+
+        print("Data written to {}".format(file_path))
+
+    def _write_jonswap_file(self, path, tab_number, file_name = "jonswap.txt"):
+        """
+        Write the jonswap file
+
+        Inputs:
+            self: The current object
+            path (string)     : Path that the file should be written into
+            tab_number (int)  : Length of the tab used to seperate data in non-table files
+            file_name (string): Name of the jonswap file
+        """
+
+        # TODO: Add other boundary conditions that use the jonswap.txt file
+        write_table_dict = {
+            'parametric': False,
+            'jonstable' : True
+        }
+
+        # Check if the  jonswap should be a table or a single entry of values
+        try:
+            write_table = write_table_dict[self.wbctype]
+        except KeyError as error:
+            raise KeyError("Input wbctype: {} doesn't currently support writing a jonswap file. \
+                           The conditons that are implemented are: {}".format(self.wbctype, write_table.keys()))
+
+        # Store the name of the boundary condition file
+        self.waves_boundary["bcfile"] = file_name
+
+        # Open the jonswap file and write the data...
+        with open(os.path.join(path, file_name), 'w') as f:
+            # Writing if the data isn't a table
+            if not write_table:
+                for param in self.required_wbc_params:
+                    f.write('{}\t= {}\n'.format(param, self.waves_boundary[param]).expandtabs(tab_number))
+            
+            # Writing if the data is a table
+            elif write_table:
+                #TODO: Think of a more elegant way to do this that is more future proof
+                # Get number of entries under the first key
+                num_vals = len(self.waves_boundary['Hm0'])
+                
+                # Loop over each row of the table...
+                for i in range(num_vals):
+                    # Write the param vals into each column
+                    for param in self.required_wbc_params:
+                        f.write('{} '.format(self.waves_boundary[param][i]))
+                    
+                    # Set up the next row
+                    f.write('\n')
+    
+    def _write_wbc_file(self, path):
+        """
+        Wrapper for the functions that write the files that are needed for the wave boundary conditons
+        """ 
+
+        tab_number = 20
+        
+        # Modes that require the boun_U_dict file
+        if self.wbctype == "ts_nonh":
+            boun_U_dict = self.required_wbc_params["boun_U_dict"]
+
+            # Check if the file should be created...
+            if boun_U_dict["make_file"]:
+                # If True make the file
+                self._write_boun_U_file(path, boun_U_dict)
+
+        # wbctypes that require the jonswap.txt file
+        elif self.wbctype == "parametric" or self.wbctype == "jonstable":
+            self._write_jonswap_file(path, tab_number, file_name = "jonswap.txt")
+
+        else:
+            raise Warning("Writing the files for wbctype: {} is not implemented".format(self.wbctype))
+    
+    @staticmethod
+    def _write_params_metadata(file, file_name, current_date, user):
+        """
+        Write the Meta data of the params file
+        """
+        ## Write the meta data
+        file.write('%% XBeach model: {} \n'.format(file_name))
+        file.write('%% Params created on {} \n'.format(current_date))
+        file.write('%% Params created by {} \n'.format(user))
+        file.write('\n')
+
+    @staticmethod
+    def _write_params_general_data(file, wavemodel, wbctype, tab_number):
+        """
+        Write the general data into the params file
+        """
+
+        ## general
+        file.write('%% General \n')
+        file.write('\n')
+        if wavemodel is not None:
+            file.write('wavemodel\t= {}\n'.format(wavemodel).expandtabs(tab_number))
+
+        if wbctype is not None:
+            file.write('wbctype\t= {}\n'.format(wbctype).expandtabs(tab_number))
+        file.write('\n')
+
+    def _write_params_grid_data(self, file, tab_number):
+        """
+        TODO: Check if this needs to be a internal module. 
+        For the time being this is going to be the only one that stays inside of the class"""
+        ## grid
+        file.write('%% Grid \n')
+        file.write('\n')
+        file.write('vardx\t= {}\n'.format(self.vardx).expandtabs(tab_number))
+        file.write('posdwn\t= {}\n'.format(self.posdwn).expandtabs(tab_number))
+        file.write('nx\t= {}\n'.format(self.nx).expandtabs(tab_number))
+        file.write('ny\t= {}\n'.format(self.ny).expandtabs(tab_number))
+        file.write('xori\t= {}\n'.format(self.xori).expandtabs(tab_number))
+        file.write('yori\t= {}\n'.format(self.yori).expandtabs(tab_number))
+        file.write('alfa\t= {}\n'.format(self.alfa).expandtabs(tab_number)) 
+        file.write('xfile\t= x.grd\n'.expandtabs(tab_number))
+
+        # Check that the model has a y-grid (ie. that's its 2d)
+        if not self.ygr is None:
+            file.write('yfile\t= y.grd\n'.expandtabs(tab_number))
+
+        file.write('depfile\t= bed.dep\n'.expandtabs(tab_number))
+        file.write('thetamin\t= {}\n'.format(self.thetamin).expandtabs(tab_number))
+        file.write('thetamax\t= {}\n'.format(self.thetamax).expandtabs(tab_number))
+        file.write('thetanaut\t= {}\n'.format(self.thetanaut).expandtabs(tab_number))
+        file.write('dtheta\t= {}\n'.format(self.dtheta).expandtabs(tab_number))
+        file.write('dtheta_s\t= {}\n'.format(self.dtheta).expandtabs(tab_number))
+        file.write('\n')
+
+    def _write_params_tide_data(self, file, tab_number):
+        """
+        Write the tide data to the file
+        """
+
+        file.write('%% Tide boundary conditions \n')
+        file.write('\n')     
+
+        if self.zs0type == 'par':
+            file.write('zs0\t= {}\n'.format())    
+
+        elif self.zs0type == 'list':
+            for item in self.tide_boundary:
+                if item[0] != '_':
+                    file.write('{}\t= {}\n'.format(item, self.tide_boundary[item]).expandtabs(tab_number))
+       
+        file.write('\n')
+
+    def _write_params_input_vars(self, file, tab_number):
+        """
+        Write the input variables? into the param file
+        # TODO: Check what this is doing """
+
+        for par_category in self.input_par:
+            ## skip category starting with _
+            if par_category[0]=='_':
+                continue
+            
+            ## write meta
+            file.write('%% {} \n'.format(par_category))
+            file.write('\n')
+
+            for par in self.input_par[par_category]:
+                file.write('{}\t= {}\n'.format(par,self.input_par[par_category][par]).expandtabs(tab_number))
+            file.write('\n')
+    
+    def _write_params_output_vars(self, file, tab_number):
+        """
+        Write the variables that should be output by the xBeach model into the params file"""
+        
+        ## write output variables
+        if '_Output' in self.input_par:
+            file.write('%% Output variables \n')
+            file.write('\n')
+            for par in self.input_par['_Output']:
+                dummy = self.input_par['_Output'][par]
+                file.write('{}\t= {}\n'.format(par,len(dummy)).expandtabs(tab_number))
+
+                if not isinstance(dummy, list):
+                    raise TypeError("Expected a list for {}".format(par))
+
+                for item in dummy:
+                    file.write('{}\n'.format(item))
+                file.write('\n')
+
+    def _write_params_file(self, path_params, current_date, user, tab_number):
+
+        """
+        Write the params file. Acts as a wrapper for other functions that actually do the writing
+        """
+
+        ## Open and create the file
+        with open(path_params,'w') as f:
+            
+            # TODO: Move these functions into a util file to make this class smaller
+
+            # Write the metadata at the top of the file
+            self._write_params_metadata(f, self.file_name, current_date, user)
+
+            # Write the general data
+            self._write_params_general_data(f, self.wavemodel, self.wbctype, tab_number)
+            
+            self._write_params_grid_data(f, tab_number)
+
+            ## tide 
+            if self.zs0type is not None:
+                self._write_params_tide_data(f, tab_number)
+
+            ## write input vars
+            self._write_params_input_vars(f, tab_number)
+
+            # Write the output vars
+            self._write_params_output_vars(f, tab_number)
+
     def write_model(self, path, figure=True):
-        """_summary_
+        """
+        Wrapper for functions that write the input files for the model
 
         Args:
-            path (_type_): _description_
+            path (string): _description_
             figure (bool, optional): _description_. Defaults to True.
         """        
         self.model_path = path
         path_params = os.path.join(path,'params.txt')
         
-        assert os.path.exists(path), '{} does not exist'.format(path)
-        
+        # Raise an error if the file isn't found
+        if not os.path.exists(path):
+            raise FileExistsError('{} does not exist'.format(path))
         
         current_date    = datetime.today().strftime('%Y-%m-%d %HH:%mm')
         user            =  os.path.basename(os.path.expanduser('~'))
         
-        tabnumber = 20
+        tab_number = 20
         
-        ## waves boundary
-        if self.wbctype=='parametric':
-            if 'Wave boundary condition parameters' in self.input_par:
-                self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonswap.txt'
-            else:
-               self.input_par['Wave boundary condition parameters'] = {}
-               self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonswap.txt'
-            required_par = ['Hm0','Tp','mainang','gammajsp','s','fnyq']
-            with open(os.path.join(path,'jonswap.txt'),'w') as f:
-                for par in required_par:
-                    f.write('{}\t= {}\n'.format(par,self.waves_boundary[par]).expandtabs(tabnumber))
-                
-        elif self.wbctype=='jonstable':
-            if 'Wave boundary condition parameters' in self.input_par:
-                self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonstable.txt'
-            else:
-               self.input_par['Wave boundary condition parameters'] = {}
-               self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonstable.txt'                
-            required_par = ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc']
-            with open(os.path.join(path,'jonstable.txt'),'w') as f:
-                for ii in range(len(self.waves_boundary['Hm0'])):
-                    for par in required_par:
-                        f.write('{} '.format(self.waves_boundary[par][ii]))
-                    f.write('\n')
+        # Write the wave boundary condition files
+        self._write_wbc_file(path)
         
-        
-        ## create params
-        with open(path_params,'w') as f:
-            ## meta data
-            f.write('%% XBeach model: {} \n'.format(self.fname))
-            f.write('%% Params created on {} \n'.format(current_date))
-            f.write('%% Params created by {} \n'.format(user))
-            f.write('\n')
-
-            ## general
-            f.write('%% General \n')
-            f.write('\n')
-            if self.wavemodel!=None:
-                f.write('wavemodel\t= {}\n'.format(self.wavemodel).expandtabs(tabnumber))
-            if self.wbctype!=None:
-                f.write('wbctype\t= {}\n'.format(self.wbctype).expandtabs(tabnumber))
-            f.write('\n')
-            
-            ## grid
-            f.write('%% Grid \n')
-            f.write('\n')
-            f.write('vardx\t= {}\n'.format(self.vardx).expandtabs(tabnumber))
-            f.write('posdwn\t= {}\n'.format(self.posdwn).expandtabs(tabnumber))
-            f.write('nx\t= {}\n'.format(self.nx).expandtabs(tabnumber))
-            f.write('ny\t= {}\n'.format(self.ny).expandtabs(tabnumber))
-            f.write('xori\t= {}\n'.format(self.xori).expandtabs(tabnumber))
-            f.write('yori\t= {}\n'.format(self.yori).expandtabs(tabnumber))
-            f.write('alfa\t= {}\n'.format(self.alfa).expandtabs(tabnumber)) 
-            f.write('xfile\t= x.grd\n'.expandtabs(tabnumber))
-            if not self.ygr is None:
-                f.write('yfile\t= y.grd\n'.expandtabs(tabnumber))
-            f.write('depfile\t= bed.dep\n'.expandtabs(tabnumber))
-            f.write('thetamin\t= {}\n'.format(self.thetamin).expandtabs(tabnumber))
-            f.write('thetamax\t= {}\n'.format(self.thetamax).expandtabs(tabnumber))
-            f.write('thetanaut\t= {}\n'.format(self.thetanaut).expandtabs(tabnumber))
-            f.write('dtheta\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
-            f.write('dtheta_s\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
-            f.write('\n')
-
-            ## tide 
-            if self.zs0type != None:
-                f.write('%% Tide boundary conditions \n')
-                f.write('\n')        
-                if self.zs0type == 'par':
-                    f.write('zs0\t= {}\n'.format())    
-                elif self.zs0type == 'list':
-                    for item in self.tide_boundary:
-                        if item[0] != '_':
-                            f.write('{}\t= {}\n'.format(item, self.tide_boundary[item]).expandtabs(tabnumber))
-                f.write('\n')
-
-                
-            
-            ## write input vars
-            for par_category in self.input_par:
-                ## skip category starting with _
-                if par_category[0]=='_':
-                    continue
-                
-                ## write meta
-                f.write('%% {} \n'.format(par_category))
-                f.write('\n')
-                for par in self.input_par[par_category]:
-                    f.write('{}\t= {}\n'.format(par,self.input_par[par_category][par]).expandtabs(tabnumber))
-                f.write('\n')
-
-
-            ## write output variables
-            if '_Output' in self.input_par:
-                f.write('%% Output variables \n')
-                f.write('\n')
-                for par in self.input_par['_Output']:
-                    dummy = self.input_par['_Output'][par]
-                    f.write('{}\t= {}\n'.format(par,len(dummy)).expandtabs(tabnumber))
-                    assert type(dummy)==list, 'expected a list for {}'.format(par)
-                    for item in dummy:
-                        f.write('{}\n'.format(item))
-                    f.write('\n')
+        # Write the params file
+        self._write_params_file(path_params, current_date, user, tab_number)
     
-        ## write grid x
-        with open(os.path.join(path,'x.grd'),'w') as f:
-            xgr = np.atleast_2d(self.xgr)
-            for ii in range(self.ny+1):
-                for jj in range(self.nx+1):
-                    f.write('{:.3f} '.format(xgr[ii,jj]))
-                f.write('\n')
-
-        if not self.ygr is None:
-            ## write grid y
-            with open(os.path.join(path,'y.grd'),'w') as f:
-                for ii in range(self.ny+1):
-                    for jj in range(self.nx+1):
-                        f.write('{:.3f} '.format(self.ygr[ii,jj]))
-                    f.write('\n')
-
-       ## write dep
-        with open(os.path.join(path,'bed.dep'),'w') as f:
-            zgr = np.atleast_2d(self.zgr)
-            for ii in range(self.ny+1):
-                for jj in range(self.nx+1):
-                    f.write('{:.3f} '.format(zgr[ii,jj]))
-                f.write('\n')             
+        # Do a loop for the other files
+        file_arr_dict = {"x.grd": self.xgr,
+                         "y.grd": self.ygr, 
+                         "bed.dep": self.zgr,
+                         "ne_bed.dep": self.nebed,
+                         "friction.dep": self.friction,
+                         "wavefriction.dep": self.wavefriction
+                         } 
+        
+        # Loop over the dict...
+        for key, value in file_arr_dict.items():
+            # Check that the value isn't none
+            if value is not None:
+                # Treat the arr as at least 2d, this allows the 1d models to be written with the 2d func
+                value = np.atleast_2d(value)
                 
-        ## write ne-layer
-        if self.struct != None:
-            nebed = np.atleast_2d(self.nebed)
-            with open(os.path.join(path,'ne_bed.dep'),'w') as f:
-                for ii in range(self.ny+1):
-                    for jj in range(self.nx+1):
-                        f.write('{} '.format(nebed[ii,jj]))
-                    f.write('\n')   
-
-        ## write bottom friction layer        
-        if self.friction_layer != None:
-            friction = np.atleast_2d(self.friction)
-            with open(os.path.join(path,'friction.dep'),'w') as f:
-                for ii in range(self.ny+1):
-                    for jj in range(self.nx+1):
-                        f.write('{:.3f} '.format(friction[ii,jj]))
-                    f.write('\n')  
-
-        ## write wave bottom friction layer            
-        if self.wavefriction_layer != None:
-            wavefriction = np.atleast_2d(self.wavefriction)
-            with open(os.path.join(path,'wavefriction.dep'),'w') as f:
-                for ii in range(self.ny+1):
-                    for jj in range(self.nx+1):
-                        f.write('{} '.format(wavefriction[ii,jj]))
-                    f.write('\n')   
+                # Write the file
+                dummy_path = os.path.join(path, key)
+                write_2d_arr_2_file(value, dummy_path)        
 
         ## write tide boundary condition
-         
         if self.zs0type == 'list':
             with open(os.path.join(path,'tide.txt'), 'w') as f:
                 for ir in range(self.tide_boundary['_tidelen']):
@@ -593,7 +915,7 @@ class XBeachModelSetup():
             plt.colorbar()
             plt.title('World coordinates - output')
 
-        plt.suptitle(self.fname)
+        plt.suptitle(self.file_name)
 
         if self.struct == 1:
             if not self.fast1D == True:

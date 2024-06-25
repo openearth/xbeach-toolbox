@@ -46,7 +46,6 @@ def rotate(x, y, theta, origin = [0,0]):
 
     return xrot.reshape(ny, nx)+x0, yrot.reshape(ny, nx)+y0
 
-
 def rotate_grid(xgr, ygr, theta):
     '''
     Rotate_grid(xgr,ygr,theta)

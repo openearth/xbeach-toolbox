@@ -11,6 +11,9 @@ import os
 
 def diff(A,direc = 0):
     '''
+    NOTE: There's a built in numpy function to do this: np.diff( "vector or matrix")
+    Link: https://numpy.org/doc/stable/reference/generated/numpy.diff.html
+    
     Computes the difference in subsequent items
     A is either a vector or a 2D matrix
     if A is a matrix, 
@@ -69,7 +72,7 @@ def smoothness(x, y, outputloc = ''):
     '''
     Perform grid checks based on D3D-quickin procedure for 
     smoothness in m and n-direction and stores figures
-    note that it is advisable to use local coordinate system!
+    NOTE: It is advisable to use local coordinate system!
     Author: Cas van Bemmelen
     Date: 26-06-2023
     

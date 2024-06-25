@@ -32,8 +32,8 @@ class XBeachModelAnalysis():
         """_summary_
 
         Args:
-            fname (_type_): _description_
-            model_path (_type_): _description_
+            fname (string): File name - Doesn't seem to be used for anything
+            model_path (string): Path to folder containing file
         """        
         self.fname = fname
         self.model_path = model_path
@@ -59,7 +59,6 @@ class XBeachModelAnalysis():
                           'u_mean', 'v_mean', 'ue_mean', 've_mean', 'Subg_mean', 'Svbg_mean', 'Susg_mean', 'Svsg_mean',
                           'u_max', 'v_max', 'ue_max', 've_max', 'Subg_max', 'Svbg_max', 'Susg_max', 'Svsg_max',
                           'u_min', 'v_min', 'ue_min', 've_min', 'Subg_min', 'Svbg_min', 'Susg_min', 'Svsg_min']
-
 
     def get_metadata(self):
         '''
@@ -147,6 +146,8 @@ class XBeachModelAnalysis():
 
         # read params from params file
         params = {}
+        # TODO: This get's caught up when there's an equal sign in a comment. Should check if there's a 
+                # comment sign on the line before trying to unpack values
         for d in dat:
             if '=' in d:
                 x1, x2 = d.split('=')
@@ -291,7 +292,6 @@ class XBeachModelAnalysis():
             self.wind['time'] = dat[:, 0]
             self.wind['u10'] = dat[:, 1]
             self.wind['u10dir'] = dat[:, 2]
-
             
     def load_model_setup(self):
         """_summary_
@@ -301,7 +301,6 @@ class XBeachModelAnalysis():
         self.get_waves()
         self.get_vegetation()
         self.get_tide()
-
 
     def load_output_coordinates(self):
         """_summary_
@@ -425,6 +424,7 @@ class XBeachModelAnalysis():
             var (_type_): _description_
         """        
         if var in self.var:
+            print("Variable already loaded")
             return
 
         if '_mean' in var:
@@ -438,7 +438,10 @@ class XBeachModelAnalysis():
         elif 'point_' in var:
             assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'
         else:
-            assert sum([var in x for x in self.params['globalvar']]) > 0, '{} not in xb output'
+            # Check if the variable is one of the outputted global variables from the model
+            if var not in self.params['globalvar']:
+                raise IndexError("Variable is not an available globalvar output." + 
+                                 " The available outputs are {}".format(self.params["globalvar"]))
 
         # if not yet present, load coordinates
         if self.var == {}:
@@ -518,7 +521,6 @@ class XBeachModelAnalysis():
 
         return self.var['pointtime'][:Nt-1], self.var[var][:Nt-1, index]
 
-
     def _mdates_concise_subplot_axes(self, ax):
         """_summary_
 
@@ -532,7 +534,6 @@ class XBeachModelAnalysis():
             [axi.xaxis.set_major_formatter(formatter) for axi in ax]
         except:
             ax.xaxis.set_major_formatter(formatter)
-
 
     def fig_check_tide_bc(self):
         """_summary_
@@ -889,8 +890,6 @@ class XBeachModelAnalysis():
             plt.savefig(os.path.join(self.model_path, 'fig', 'difmap_{}_it_{}-{}.png'.format(var, itend, it0)), dpi=200)
         return fig, ax
 
-
-    
     def fig_cross_var(self,var, it, iy=None, itype=None, coord=None, plot_ref_bathy=True, figax = None, zmin=-25, ylim=None, fmt='.-'):
         """_summary_
 
