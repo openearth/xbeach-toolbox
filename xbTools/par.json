@@ -1,9 +1,6 @@
 {
-    "_General": [
-        "wavemodel",
-        "wbctype"
-    ],
     "Physical processes": [
+        "wavemodel",
         "sedtrans",
         "morphology",
         "vegetation",
@@ -13,22 +10,13 @@
         "viscosity",
         "swrunup",
         "swave",
+        "lwave",
         "snells",
         "single_dir",
         "setbathy",
         "gwflow",
         "avalanching",
-        "cyclic",
-        "nonhq3d"
-    ],
-    "Initial conditions": [
-        "zs0",
-        "zsinitfile",
-        "hotstartflow"
-    ],
-    "Model time": [
-        "tstop",
-        "CFL"
+        "cyclic"
     ],
     "Grid parameters": [
         "thetamin",
@@ -38,37 +26,113 @@
         "thetanaut",
         "posdwn"
     ],
-    "Flow boundary condition parameters": [
-        "front",
-        "back",
-        "left",
-        "right"
+    "Model time": [
+        "CFL",
+        "dtset",
+        "tstop",
+        "maxdtfac"
     ],
-    "Flow parameters": [
-        "tidetype",
-        "epsi",
-        "bedfriction",
-        "bedfriccoef",
-        "nuhfac",
-        "bedfricfile"
+    "Physical constants": [
+        "rho",
+        "g",
+        "depthscale"
     ],
-    "Flow numerics parameters": [
-        "eps",
-        "eps_sd"
-    ],
-    "Tide boundary conditions": [
-        "zs0file",
-        "tideloc",
-        "paulrevere"
+    "Initial conditions": [
+        "zsinitfile",
+        "hotstartflow"
     ],
     "Wave boundary condition parameters": [
         "Hrms",
         "Tlong",
         "Trep",
         "dir0",
+        "instat",
+        "lateralwave",
         "m",
         "taper",
-        "Tm01"
+        "Tm01",
+        "wbctype"
+    ],
+    "Flow boundary condition parameters": [
+        "front",
+        "back",
+        "left",
+        "right",
+        "ARC",
+        "order",
+        "highcomp",
+        "freewave",
+        "epsi",
+        "tidetype"
+    ],
+    "Tide boundary conditions": [
+        "zs0",
+        "zs0file",
+        "tideloc",
+        "paulrevere"
+    ],
+    "Discharge boundary conditions": [
+        "disch_loc_file",
+        "disch_timeseries_file",
+        "ndischarge",
+        "ntdischarge",
+        "beta"
+    ],
+    "Flow parameters": [
+        "bedfriction",
+        "bedfricfile",
+        "bedfriccoef",
+        "maxcf",
+        "mincf",
+        "nuh",
+        "nuhfac",
+        "smag"
+    ],
+    "Coriolis force parameters": [
+        "wearth",
+        "lat"
+    ],
+    "Non-hydrostatic correction parameters": [
+        "solver",
+        "solver_maxit",
+        "solver_acc",
+        "solver_urelax",
+        "kdmin",
+        "Topt",
+        "nonhq3d",
+        "nhbreaker",
+        "nhlay",
+        "dispc",
+        "breakviscfac",
+        "maxbrsteep",
+        "reformsteep"
+    ],
+    "Bed composition parameters": [
+        "ngd",
+        "nd",
+        "D50",
+        "D90"
+    ],
+    "Output": [
+        "outputformat",
+        "tintg",
+        "tintm",
+        "tstart",
+        "tintp",
+        "tintc",
+        "nrugdepth",
+        "outputprecision",
+        "timings"
+    ],
+    "_Output": [
+        "nglobalvar",
+        "nmeanvar",
+        "npointvar",
+        "npoints"
+    ],
+    "Flow numerics parameters": [
+        "eps",
+        "eps_sd"
     ],
     "Wave-spectrum boundary condition parameters": [
         "rt",
@@ -113,10 +177,6 @@
         "rhos",
         "ngd"
     ],
-    "Bed composition parameters": [
-        "D50",
-        "D90"
-    ],
     "Bed update numerics parameters": [
         "nTrepavaltime"
     ],
@@ -139,21 +199,7 @@
         "dryslp",
         "fixedavaltime"
     ],
-    "Output": [
-        "outputformat",
-        "tintg",
-        "tintm",
-        "tstart",
-        "tintp",
-        "tintc",
-        "nrugdepth",
-        "outputprecision",
-        "timings"
-    ],
-    "_Output": [
-        "nglobalvar",
-        "nmeanvar",
-        "npointvar",
-        "npoints"
+    "par":[
+        "This will store parameters that are missing from all the other sections"
     ]
 }

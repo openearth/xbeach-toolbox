@@ -11,7 +11,6 @@ module contains class to setup 1D and 2D XBeach models based on user input
 import numpy as np
 import os
 from datetime import datetime
-import json
 import matplotlib.pyplot as plt
 
 # import rotate grid from geometry
@@ -20,6 +19,9 @@ from .general.deg2uv import deg2uv
 
 # Dictionary functions
 from xbTools.general.file_utils import write_2d_arr_2_file
+
+# Document Functions
+from xbTools.doc_utilities.doc_utilts import format_subsection_header, format_header_line, get_json
 
 class XBeachModelSetup():
     '''
@@ -53,9 +55,10 @@ class XBeachModelSetup():
         """        
         return self.file_name
     
-    def set_params(self,input_par_dict):
+
+    def set_params(self,input_par_dict, json_file_name = "par.json"):
         """
-        Sets the wavemodel and any of the parameters in the par.json file (?) for the model
+        Sets the wavemodel and any of the parameters in the par.json file for the model
 
         Args:
             input_par_dict (dict): dict of input param flags and the associated values
@@ -70,28 +73,31 @@ class XBeachModelSetup():
         ## set wbctype
         if 'wbctype' in input_par_dict:
             self.wbctype = input_par_dict['wbctype'] 
-
-        ## load parameters and categories
-        # Open the par.json file in read mode
-        f           = open(os.path.join(os.path.dirname(__file__), 'par.json'),'r')
-
-        # Read the json file and store it as a python dict
-        par_dict    = json.loads(f.read())
         
+        # Get the json file that contains all of the parameters in ther proper subsection so that the self.input_par
+        # can be put under the right headers
+        folder_path = os.path.dirname(__file__)
+
+        # Add store it in the class
+        self.json_param_dict = get_json(folder_path, file_name = json_file_name)
+
         ## create input dict
         self.input_par = {}
 
         # Init 'par' key as a nested dict
         self.input_par['par'] = {}
 
+        # Init flag to track if parameters aren't found in the JSON
+        not_found_params = False
+
         ## loop over input parameters 
         for input_par in input_par_dict:
             value_added = False
 
             ## loop over categories from the par.json file
-            for par_category in par_dict:
+            for par_category in self.json_param_dict:
                 ## if input parameter is in category, add parameter
-                if input_par in par_dict[par_category]:
+                if input_par in self.json_param_dict[par_category]:
                     ## create category if not exist
                     if not par_category in self.input_par:
                         self.input_par[par_category] = {}
@@ -103,7 +109,13 @@ class XBeachModelSetup():
             if not value_added:
                 # Add all parameters that don't match a key in the par.json file to this new dict
                 self.input_par['par'][input_par] = input_par_dict[input_par]
-            
+
+                not_found_params = True
+        
+        # Print out the params that weren't found. This will help catch typo errors
+        if not_found_params:
+            print(f"The following params were not found in the JSON: \n{self.input_par['par']}")
+
     def set_grid(self,xgr,ygr,zgr, posdwn=1, xori=0, yori=0,alfa=0, thetamin=-90, thetamax = 90, thetanaut = 0, dtheta=10, dtheta_s=10):
         """_summary_
 
@@ -150,10 +162,12 @@ class XBeachModelSetup():
             self.ny = 0
         else:
             self.fast1D = False 
+        
+        # TODO: Store the grid data in a dictionary
+
         ## set values
         self.posdwn = posdwn
         self.xori   = xori
-        self.yori   = yori
         self.yori   = yori
         self.thetamin   = thetamin
         self.thetamax   = thetamax
@@ -253,6 +267,7 @@ class XBeachModelSetup():
         """
 
         # Using False to note that the required parameters haven't been included here yet
+        # TODO: Update the ts_nonh required parameters to make it more general
         wbctype_options = {'swan'        : False,
                           'vardens'      : False,
                            'off'         : False,
@@ -260,7 +275,7 @@ class XBeachModelSetup():
                            'resuse'      : False, 
                            'ts_1'        : False, 
                            'ts_2'        : False, 
-                           'ts_nonh'     : ["boun_U_dict"],
+                           'ts_nonh'     : ["make_file", "file_name", "dimension", "variable_dict"],
                            'parametric': ['Hm0','Tp','mainang','gammajsp','s','fnyq']
                            }
 
@@ -314,6 +329,7 @@ class XBeachModelSetup():
         """
 
         # Using False to note that the required parameters haven't been included here yet
+        # TODO: Update the ts_nonh required parameters to make it more general
         instat_type_options = {
                                 'bichrom'     : False,
                                 'ts_1'        : False, 
@@ -322,7 +338,7 @@ class XBeachModelSetup():
                                 'swan'        : False,
                                 'vardens'     : False,
                                 'resuse'      : False, 
-                                'ts_nonh'     : ["boun_U_dict"],
+                                'ts_nonh'     : ["make_file", "file_name", "dimension", "variable_dict"],
                                 'off'         : False,
                                 'stat_table'  : ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc'],
                                 'jonstable '  : ['Hm0','Tp','mainang','gammajsp','s','fnyq']
@@ -339,7 +355,7 @@ class XBeachModelSetup():
         
         return required_params
 
-    def set_waves(self, wbctype, input_struct, instat_bc = False):
+    def set_waves(self, wbctype, input_struct, instat_bc = False, num_deci_dig = 5):
         """
 
         Gets the required inputs for the selected boundary condition and stores the values in a dict for 
@@ -367,6 +383,8 @@ class XBeachModelSetup():
         elif instat_bc:
             # Use the instat conditions
             required_par = self._get_instat_required_params(wbctype)
+        else: 
+            TypeError("instat_bc should be a boolean. Type is: {}".format(type(instat_bc)))
 
         # Store the required parameters for later usage
         self.required_wbc_params = required_par
@@ -382,7 +400,7 @@ class XBeachModelSetup():
             
             # If param is in input string add it to waves_boundary dict for later output
             self.waves_boundary[item] =  input_struct[item]
-        
+            
     def set_vegetation(self):
         """_summary_
         """        
@@ -455,7 +473,7 @@ class XBeachModelSetup():
         ## todo
         pass    
 
-    def _write_boun_U_file(self, path, boun_U_dict):
+    def _write_boun_U_file(self, path, boun_U_dict, num_dec_dig):
         """
         Writes the boundary conditon file that is required for ts_nonh models
         
@@ -478,6 +496,7 @@ class XBeachModelSetup():
                            "dV": "dV data",
                            "q" : "q data",
                            "dq": "dq data"
+                           "zs": "surface pertubation data" 
                        }         
             }
 
@@ -526,7 +545,7 @@ class XBeachModelSetup():
             file.write("{}\n".format(boun_U_dict["dimension"]))
             file.write("{}\n".format(num_variables))
             file.write("{}\n".format(string_variables))
-            np.savetxt(file, data, delimiter=' ', fmt='%10.5f')
+            np.savetxt(file, data, delimiter=' ', fmt=f'%10.{num_dec_dig}f')
 
         print("Data written to {}".format(file_path))
 
@@ -579,7 +598,7 @@ class XBeachModelSetup():
                     # Set up the next row
                     f.write('\n')
     
-    def _write_wbc_file(self, path):
+    def _write_wbc_file(self, path, num_dec_dig):
         """
         Wrapper for the functions that write the files that are needed for the wave boundary conditons
         """ 
@@ -588,12 +607,14 @@ class XBeachModelSetup():
         
         # Modes that require the boun_U_dict file
         if self.wbctype == "ts_nonh":
-            boun_U_dict = self.required_wbc_params["boun_U_dict"]
-
+            boun_U_dict = self.waves_boundary
+            
             # Check if the file should be created...
+            # The first index should be "make_file"
+            # TODO: Update the required parameters to be a 
             if boun_U_dict["make_file"]:
                 # If True make the file
-                self._write_boun_U_file(path, boun_U_dict)
+                self._write_boun_U_file(path, boun_U_dict, num_dec_dig)
 
         # wbctypes that require the jonswap.txt file
         elif self.wbctype == "parametric" or self.wbctype == "jonstable":
@@ -603,24 +624,40 @@ class XBeachModelSetup():
             raise Warning("Writing the files for wbctype: {} is not implemented".format(self.wbctype))
     
     @staticmethod
-    def _write_params_metadata(file, file_name, current_date, user):
+    def _write_params_metadata(file, current_date, user):
         """
         Write the Meta data of the params file
         """
-        ## Write the meta data
-        file.write('%% XBeach model: {} \n'.format(file_name))
-        file.write('%% Params created on {} \n'.format(current_date))
-        file.write('%% Params created by {} \n'.format(user))
-        file.write('\n')
+        # Def a function to format the header lines 
+
+        
+        function_name = "_write_params_metadata"
+
+        header = [
+        "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%",
+        format_header_line("XBeach parameter settings input file"),
+        format_header_line(""),
+        format_header_line(f"date:     {current_date}"),
+        format_header_line(f"Params created by {user}"),
+        format_header_line(f"function: {function_name}"),
+        "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n",
+        ]
+        
+        # Make the list into a string and add the newline values
+        header = "\n".join(header)
+
+        # Write the metadata
+        file.write(header)
 
     @staticmethod
     def _write_params_general_data(file, wavemodel, wbctype, tab_number):
         """
         Write the general data into the params file
+
+        TODO: WaveHello - In the process of deprecating this function
         """
 
         ## general
-        file.write('%% General \n')
         file.write('\n')
         if wavemodel is not None:
             file.write('wavemodel\t= {}\n'.format(wavemodel).expandtabs(tab_number))
@@ -633,8 +670,11 @@ class XBeachModelSetup():
         """
         TODO: Check if this needs to be a internal module. 
         For the time being this is going to be the only one that stays inside of the class"""
+
+        # TODO: Once the grid data is stored in a dictionary update this to follow the format of the other parameters
+
         ## grid
-        file.write('%% Grid \n')
+        file.write(f"{format_subsection_header("Grid parameters")}\n" )
         file.write('\n')
         file.write('vardx\t= {}\n'.format(self.vardx).expandtabs(tab_number))
         file.write('posdwn\t= {}\n'.format(self.posdwn).expandtabs(tab_number))
@@ -661,8 +701,7 @@ class XBeachModelSetup():
         """
         Write the tide data to the file
         """
-
-        file.write('%% Tide boundary conditions \n')
+        file.write(f"{format_subsection_header("Tide Boundary Conditions")}\n" )
         file.write('\n')     
 
         if self.zs0type == 'par':
@@ -677,20 +716,41 @@ class XBeachModelSetup():
 
     def _write_params_input_vars(self, file, tab_number):
         """
-        Write the input variables? into the param file
-        # TODO: Check what this is doing """
+        Writes the input parameters (self.input_par) to the params.txt file in the specified file
 
-        for par_category in self.input_par:
-            ## skip category starting with _
+        Inputs:
+            self: Current instance of class
+            file: File that the param data should be written to
+            tab_number: Number of tabs that should follow a parameter in the file
+
+        """
+
+        # Create a new ordered dictionary based on the order of json file
+        # This way the order follows the JSON file
+        # The JSON file can be put in the same order of the xBlog file making comparing the sections easier
+        ordered_param_dict = {k: self.input_par[k] for k in self.json_param_dict if k in self.input_par}
+
+        if "wbctype" not in ordered_param_dict["Wave boundary condition parameters"].keys():
+            print(("\nWARNING: Include the wbctype in the set_params function. "
+                   "In the process of moving away from printing the "
+                   "wbctype at the top of the params.txt file"
+                ))
+        
+        # Loop over the parameter categories in the input dict...
+        for par_category in ordered_param_dict:
+            ## skip category starting with _. The name of the category is set in the JSON file
             if par_category[0]=='_':
                 continue
             
             ## write meta
-            file.write('%% {} \n'.format(par_category))
+            # Write the header of the category the parameter is in
+            file.write(f"{format_subsection_header(par_category)}\n" )
             file.write('\n')
 
-            for par in self.input_par[par_category]:
-                file.write('{}\t= {}\n'.format(par,self.input_par[par_category][par]).expandtabs(tab_number))
+            # Go through all of the inputs in the category write those values
+            for par in ordered_param_dict[par_category]:
+                file.write('{}\t= {}\n'.format(par,ordered_param_dict[par_category][par]).expandtabs(tab_number))
+
             file.write('\n')
     
     def _write_params_output_vars(self, file, tab_number):
@@ -699,7 +759,7 @@ class XBeachModelSetup():
         
         ## write output variables
         if '_Output' in self.input_par:
-            file.write('%% Output variables \n')
+            file.write(f"{format_subsection_header("Output variables")}\n" )
             file.write('\n')
             for par in self.input_par['_Output']:
                 dummy = self.input_par['_Output'][par]
@@ -724,10 +784,12 @@ class XBeachModelSetup():
             # TODO: Move these functions into a util file to make this class smaller
 
             # Write the metadata at the top of the file
-            self._write_params_metadata(f, self.file_name, current_date, user)
+            self._write_params_metadata(f, current_date, user)
 
             # Write the general data
-            self._write_params_general_data(f, self.wavemodel, self.wbctype, tab_number)
+            # 
+            # NOTE: WaveHello - Commented out because the data is being written under the correct subheader now
+            # self._write_params_general_data(f, self.wavemodel, self.wbctype, tab_number)
             
             self._write_params_grid_data(f, tab_number)
 
@@ -741,13 +803,13 @@ class XBeachModelSetup():
             # Write the output vars
             self._write_params_output_vars(f, tab_number)
 
-    def write_model(self, path, figure=True):
+    def write_model(self, path, figure=False, num_dec_dig = 5):
         """
         Wrapper for functions that write the input files for the model
 
         Args:
-            path (string): _description_
-            figure (bool, optional): _description_. Defaults to True.
+            path (string): Path to where the xBeach data is written to
+            figure (bool, optional): _description_. Defaults to False.
         """        
         self.model_path = path
         path_params = os.path.join(path,'params.txt')
@@ -762,7 +824,7 @@ class XBeachModelSetup():
         tab_number = 20
         
         # Write the wave boundary condition files
-        self._write_wbc_file(path)
+        self._write_wbc_file(path, num_dec_dig)
         
         # Write the params file
         self._write_params_file(path_params, current_date, user, tab_number)
