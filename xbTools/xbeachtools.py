@@ -18,10 +18,9 @@ from .general.geometry import rotate_grid
 from .general.deg2uv import deg2uv
 
 # Dictionary functions
-from xbTools.general.file_utils import write_2d_arr_2_file
+from xbTools.general.file_utils import (write_2d_arr_2_file, format_subsection_header, 
+                                       format_header_line, get_json)
 
-# Document Functions
-from xbTools.doc_utilities.doc_utilts import format_subsection_header, format_header_line, get_json
 
 class XBeachModelSetup():
     '''
@@ -44,7 +43,6 @@ class XBeachModelSetup():
         self.wavefriction = None
         self.friction = None
         self.nebed = None
-
         self.struct = None
         
     def __str__(self):
@@ -55,7 +53,6 @@ class XBeachModelSetup():
         """        
         return self.file_name
     
-
     def set_params(self,input_par_dict, json_file_name = "par.json"):
         """
         Sets the wavemodel and any of the parameters in the par.json file for the model
@@ -355,7 +352,7 @@ class XBeachModelSetup():
         
         return required_params
 
-    def set_waves(self, wbctype, input_struct, instat_bc = False, num_deci_dig = 5):
+    def set_waves(self, wbctype, input_struct, instat_bc = False):
         """
 
         Gets the required inputs for the selected boundary condition and stores the values in a dict for 
@@ -463,6 +460,22 @@ class XBeachModelSetup():
         self.zs0 =  zs0
 
         # TODO check that zs0file is at least as long as end time of simulation
+    
+    @staticmethod
+    def write_zsinitfile(init_surface_elev, model_dir, file_name = "zsinitfile.txt", decimal_digits = 5):
+        """
+        Write the initial water surface elevation file  "zsinitfile"
+        """
+        
+        # Construct the file path
+        zs_init_file_path = os.path.join(model_dir, file_name)
+
+        # Convert the data to be a least 2d, so that the writer function can work
+        init_surface_elev = np.atleast_2d(init_surface_elev)
+
+        # Write the file to the specified path
+        write_2d_arr_2_file(init_surface_elev, zs_init_file_path, decimal_digits)
+        
 
     def load_model_setup(self,path):
         """_summary_
@@ -620,6 +633,9 @@ class XBeachModelSetup():
         elif self.wbctype == "parametric" or self.wbctype == "jonstable":
             self._write_jonswap_file(path, tab_number, file_name = "jonswap.txt")
 
+        elif self.wbctype == "off":
+            # Don't need to do anything here
+            pass
         else:
             raise Warning("Writing the files for wbctype: {} is not implemented".format(self.wbctype))
     
@@ -814,7 +830,7 @@ class XBeachModelSetup():
         self.model_path = path
         path_params = os.path.join(path,'params.txt')
         
-        # Raise an error if the file isn't found
+        # Raise an error if the folder isn't found
         if not os.path.exists(path):
             raise FileExistsError('{} does not exist'.format(path))
         

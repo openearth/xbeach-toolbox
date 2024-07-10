@@ -667,7 +667,7 @@ class XBeachModelAnalysis():
 
         return fig, ax
 
-    def fig_map_var(self, var, label=None, it=np.inf, figsize=None, figax=None, **kwargs):
+    def fig_map_var(self, var,  label=None, it=np.inf, time_unit = "sec", figsize=None, figax=None, **kwargs):
         """_summary_
 
         Args:
@@ -727,9 +727,11 @@ class XBeachModelAnalysis():
 
 
         fig, ax = self._fig_map_var(data, label, figsize, figax=figax, **kwargs)
-            
+        
+        print(time_unit)
+        # time_unit = "sec"
         if self.globalstarttime is None:
-            ax.set_title('{:.1f}Hr'.format(self.var['globaltime'][it] ))
+            ax.set_title('{:.1f} {}'.format(self.var['globaltime'][it], time_unit))
         else:
             ax.set_title('{}'.format(self.var['globaltime'][it]))
 

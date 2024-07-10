@@ -96,13 +96,13 @@ def generate_batch_script(model_folder, exe_path, batch_file_name = "run_model.b
 
     if batch_file_folder is None:
         # Make the batch file path
-        batch_file_path = os.path.join(model_folder, batch_file_name)
+        batch_script_path = os.path.join(model_folder, batch_file_name)
     
     else:
         # Make the include_cd statement true, because for the batch file to be saved in a different directory than the model it will have to cd into
         # that directory
         include_cd = True
-        batch_file_path = os.path.join(batch_file_folder)
+        batch_script_path = os.path.join(batch_file_folder)
 
     # init empty string to possibly hold the change directory statement
     cd_str = ""
@@ -114,11 +114,11 @@ def generate_batch_script(model_folder, exe_path, batch_file_name = "run_model.b
     batch_str = cd_str + "call \"{}\"".format(exe_path)
 
     # Create the file and open it in write mode
-    with open(batch_file_path, "w") as f:
+    with open(batch_script_path, "w") as f:
         # write the string to the batch file
         f.write(batch_str)
 
-def run_batch_script(batch_script_path):
+def run_batch_script(batch_script_path, flag_print_Blog = False):
     # TODO: Need to test this some more. There are some troubles when the permissions 
     """
     Run a batch script given a path
@@ -137,13 +137,24 @@ def run_batch_script(batch_script_path):
     '''
     """
 
-    # Run the batch file
+    # Set the working directory to where the batch file is located
+    working_directory = os.path.dirname(batch_script_path)
+
     try:
-        subprocess.run(batch_script_path, check=True, shell=True)
+        # Execute the batch file, capturing both stdout and stderr
+        result = subprocess.run(batch_script_path, check=True, shell=True, cwd=working_directory, capture_output=True, text=True)
+        
+        # Print success message and output
         print(f"Batch file '{batch_script_path}' executed successfully.")
+
+        if flag_print_Blog:
+            print("Output:")
+            print(result.stdout)
     except subprocess.CalledProcessError as e:
-        # If not succcessful catch the error and print to the python script
+        # Print error message and captured stderr
         print(f"An error occurred while executing the batch file: {e}")
+        print("Error output:")
+        print(e.stderr)
 
 if __name__ == "__main__":
     pass
