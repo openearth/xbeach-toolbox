@@ -196,7 +196,6 @@ def xgrid(x,z,
         xgr = xgr-xgr[-1]+xend
     return xgr, zgr
 
-
 def ygrid(y,
            dymin = 5,
            dymax = 20,
@@ -283,15 +282,27 @@ def ygrid(y,
     return ygr 
 
 def grid_transition(cell1, cell2, distance):
-    
     """
-    function for grid_transition from one cell to the other
+    Function for grid transition from one cell to the other.
+
+    Parameters:
+        cell1 (float): Size of cell 1.
+        cell2 (float): Size of cell 2.
+        distance (float): Distance to transition over.
 
     Returns:
-        ff, nf, gridf, error 
-    
-    #todo improve docstring and syntax of code
-    """  
+        tuple: Tuple containing:
+            ff (np.ndarray): Array of scaling factors.
+            nf (int): Number of grid points.
+            gridf (list): List of grid points.
+            error (float): Error in transition.
+
+    Notes:
+        - This function calculates the transition grid between two cells.
+        - Adjusts the grid transition based on distance.
+
+    # TODO: Improve the syntax of this function and the docstring
+    """
 
     precision = 1e-10
     maxloop = 1e2
