@@ -665,23 +665,6 @@ class XBeachModelSetup():
         # Write the metadata
         file.write(header)
 
-    @staticmethod
-    def _write_params_general_data(file, wavemodel, wbctype, tab_number):
-        """
-        Write the general data into the params file
-
-        TODO: WaveHello - In the process of deprecating this function
-        """
-
-        ## general
-        file.write('\n')
-        if wavemodel is not None:
-            file.write('wavemodel\t= {}\n'.format(wavemodel).expandtabs(tab_number))
-
-        if wbctype is not None:
-            file.write('wbctype\t= {}\n'.format(wbctype).expandtabs(tab_number))
-        file.write('\n')
-
     def _write_params_grid_data(self, file, tab_number):
         """
         TODO: Check if this needs to be a internal module. 
@@ -803,9 +786,6 @@ class XBeachModelSetup():
             self._write_params_metadata(f, current_date, user)
 
             # Write the general data
-            # 
-            # NOTE: WaveHello - Commented out because the data is being written under the correct subheader now
-            # self._write_params_general_data(f, self.wavemodel, self.wbctype, tab_number)
             
             self._write_params_grid_data(f, tab_number)
 

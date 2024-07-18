@@ -119,7 +119,6 @@ def generate_batch_script(model_folder, exe_path, batch_file_name = "run_model.b
         f.write(batch_str)
 
 def run_batch_script(batch_script_path, flag_print_Blog = False):
-    # TODO: Need to test this some more. There are some troubles when the permissions 
     """
     Run a batch script given a path
     
@@ -132,8 +131,6 @@ def run_batch_script(batch_script_path, flag_print_Blog = False):
     -------
     None.
 
-    TODO: There's some trouble that when this is imported it tends to not work. When it is directly in the .ipynb file it works fine.
-    TODO: Note sure what's going on with it
     '''
     """
 
