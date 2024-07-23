@@ -369,7 +369,7 @@ class XBeachModelSetup():
             f.write('thetamax\t= {}\n'.format(self.thetamax).expandtabs(tabnumber))
             f.write('thetanaut\t= {}\n'.format(self.thetanaut).expandtabs(tabnumber))
             f.write('dtheta\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
-            f.write('dtheta_s\t= {}\n'.format(self.dtheta).expandtabs(tabnumber))
+            f.write('dtheta_s\t= {}\n'.format(self.dtheta_s).expandtabs(tabnumber))
             f.write('\n')
 
             ## tide 
@@ -594,7 +594,7 @@ class XBeachModelSetup():
 
         plt.suptitle(self.fname)
 
-        if self.struct == 1:
+        if self.struct == 1 and not(self.ygr==None):
             fig2 = plt.figure()
         
             plt.pcolor(self.xgr,self.ygr,self.nebed)
@@ -629,7 +629,7 @@ class XBeachModelSetup():
 
         if save_path!=None:
             fig1.savefig(os.path.join(save_path,'domain.png'),dpi=250)
-            if self.struct == 1:
+            if self.struct == 1 and not(self.ygr==None):
                 fig2.savefig(os.path.join(save_path,'ne_bed.png'),dpi=250)
             if self.friction_layer == 1:
                 fig3.savefig(os.path.join(save_path,'friction.png'),dpi=250)
