@@ -69,8 +69,9 @@ class XBeachModelSetup():
         self.input_par = {}
         self.input_par['par'] = {}
         ## loop over input parameters 
-        value_added = False
+        
         for input_par in input_par_dict:
+            value_added = False
             ## loop over categories
             for par_category in par_dict:
                 ## if input parameter is in category, add parameter
@@ -594,44 +595,49 @@ class XBeachModelSetup():
 
         plt.suptitle(self.fname)
 
-        if self.struct == 1 and not(self.ygr==None):
-            fig2 = plt.figure()
-        
-            plt.pcolor(self.xgr,self.ygr,self.nebed)
-            plt.xlabel('x')
-            plt.ylabel('y')
-            plt.colorbar()
-            plt.title('ne_bed.dep (positive)')
-            plt.axis('scaled')
-            plt.grid('on')
+        if self.struct == 1:
+            if not self.fast1D == True:
+                fig2 = plt.figure()
+
+                plt.pcolor(self.xgr, self.ygr, self.nebed)
+                plt.xlabel("x")
+                plt.ylabel("y")
+                plt.colorbar()
+                plt.title("ne_bed.dep (positive)")
+                plt.axis("scaled")
+                plt.grid("on")
                 
         if self.friction_layer == 1:
-            fig3 = plt.figure()
-        
-            plt.pcolor(self.xgr,self.ygr,self.friction)
-            plt.xlabel('x')
-            plt.ylabel('y')
-            plt.colorbar()
-            plt.title('friction.dep (positive)')#+self.input_par['Flow parameters']['bedfriction'])
-            plt.axis('scaled')
-            plt.grid('on')
+            if not self.fast1D == True:
+                fig3 = plt.figure()
+
+                plt.pcolor(self.xgr, self.ygr, self.friction)
+                plt.xlabel("x")
+                plt.ylabel("y")
+                plt.colorbar()
+                plt.title(
+                    "friction.dep (positive)"
+                )  # +self.input_par['Flow parameters']['bedfriction'])
+                plt.axis("scaled")
+                plt.grid("on")
                 
         if self.wavefriction_layer == 1:
-            fig4 = plt.figure()
-        
-            plt.pcolor(self.xgr,self.ygr,self.wavefriction)
-            plt.xlabel('x')
-            plt.ylabel('y')
-            plt.colorbar()
-            plt.title('wavefriction.dep (positive) - fw')
-            plt.axis('scaled')
-            plt.grid('on')
+            if not self.fast1D == True:
+                fig4 = plt.figure()
+
+                plt.pcolor(self.xgr, self.ygr, self.wavefriction)
+                plt.xlabel("x")
+                plt.ylabel("y")
+                plt.colorbar()
+                plt.title("wavefriction.dep (positive) - fw")
+                plt.axis("scaled")
+                plt.grid("on")
 
         if save_path!=None:
-            fig1.savefig(os.path.join(save_path,'domain.png'),dpi=250)
-            if self.struct == 1 and not(self.ygr==None):
-                fig2.savefig(os.path.join(save_path,'ne_bed.png'),dpi=250)
-            if self.friction_layer == 1:
-                fig3.savefig(os.path.join(save_path,'friction.png'),dpi=250)
-            if self.wavefriction_layer == 1:
-                fig4.savefig(os.path.join(save_path,'wavefriction.png'),dpi=250)
+            fig1.savefig(os.path.join(save_path, "domain.png"), dpi=250)
+            if self.struct == 1 and not self.fast1D == True:
+                fig2.savefig(os.path.join(save_path, "ne_bed.png"), dpi=250)
+            if self.friction_layer == 1 and not self.fast1D == True:
+                fig3.savefig(os.path.join(save_path, "friction.png"), dpi=250)
+            if self.wavefriction_layer == 1 and not self.fast1D == True:
+                fig4.savefig(os.path.join(save_path, "wavefriction.png"), dpi=250)
