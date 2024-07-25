@@ -238,6 +238,7 @@ class XBeachModelAnalysis():
             self.waves_boundary['mainang'] = dat[:, 2]
             self.waves_boundary['gammajsp'] = dat[:, 3]
             self.waves_boundary['s'] = dat[:, 4]
+
             if self.globalstarttime is None:
                 self.waves_boundary['time'] = np.cumsum(dat[:, 5])
             else:
@@ -256,6 +257,8 @@ class XBeachModelAnalysis():
         else:
             print('not possible')
             pass
+
+        return self.waves_boundary
 
     def get_vegetation(self):
         """_summary_
@@ -281,6 +284,20 @@ class XBeachModelAnalysis():
             self.tide['tideloc'] = self.params['tideloc']
             if 'paulrevere' in self.params:
                 self.tide['paulrevere'] = self.params['paulrevere']
+
+            if self.globalstarttime is None:
+                self.tide['time'] = dat[:, 0]
+            else:
+                loctime = dat[:, 0]
+                globtime = np.array([np.timedelta64(int(x), 's') for x in loctime]) + self.globalstarttime
+                self.waves_boundary['time'] = globtime
+
+            return self.tide
+        
+        else:
+            print('no timevarying boundary file imposed')
+            return self.params['zs0']
+        
 
     def get_wind(self):
         """_summary_
@@ -1160,4 +1177,109 @@ class XBeachModelAnalysis():
 
         if ja_plot_localcoords is False:
             self.set_plot_localcoords(False)
+        return fig, ax
+    
+    def fig_map_contour_var(self, var, levels, label=None, it=np.inf, figax=None, figsize=None, **kwargs):
+        """
+        Generates a contour plot of a specified variable at a given time step.
+
+        Parameters:
+        - var: str
+            The variable name to plot.
+        - levels: array-like
+            The levels at which to draw the contour lines.
+        - label: str, optional
+            The label for the color bar and plot title. Defaults to the variable name.
+        - it: int, optional
+            The time index for the plot. Defaults to the last time step if np.inf.
+        - figax: tuple, optional
+            A tuple containing the figure and axis objects. If None, a new figure and axis are created.
+        - figsize: tuple, optional
+            The size of the figure. Used only if figax is None.
+        - kwargs: dict, optional
+            Additional keyword arguments passed to plt.contour.
+
+        Returns:
+        - fig: matplotlib.figure.Figure
+            The figure object containing the plot.
+        - ax: matplotlib.axes.Axes
+            The axis object containing the plot.
+        """
+
+        # Define a nested class for formatting contour levels
+        # This class is used to format contour level labels, ensuring that trailing zeros are removed 
+        # from the string representation of the level if present.
+        class nf(float):
+            def __repr__(self):
+                s = f'{self:.1f}'
+                return f'{self:.0f}' if s[-1] == '0' else s
+
+        # Load the model output data for the specified variable
+        self.load_modeloutput(var)
+
+        # Set the time index to the last time step if not specified
+        if np.isinf(it):
+            it = len(self.var['globaltime']) - 1
+        assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
+
+        # Extract the data for the specified variable and time step
+        data = self.var[var][it, :, :]
+        if label is None:
+            label = str(var)
+
+        # Select coordinate system
+        if self.plot_localcoords:
+            x = self.var['localx']
+            y = self.var['localy']
+        else:
+            x = self.var['globalx']
+            y = self.var['globaly']
+
+        # Create a new figure and axis if not provided
+        if figax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        else:
+            fig, ax = figax
+
+        # Plot the contour
+        CS = ax.contour(x, y, data, levels=levels, **kwargs)
+        
+        # Format the contour levels
+        CS.levels = [nf(val) for val in CS.levels]
+        ax.clabel(CS, CS.levels, inline=True, fontsize=10)
+
+        # Set axis labels based on coordinate system
+        if self.plot_localcoords:
+            if self.plot_km_coords:
+                ax.set_xlabel('along shore [km]')
+                ax.set_ylabel('cross shore [km]')
+            else:
+                ax.set_xlabel('along shore [m]')
+                ax.set_ylabel('cross shore [m]')
+        else:
+            if self.plot_km_coords:
+                ax.set_xlabel('x [km]')
+                ax.set_ylabel('y [km]')
+            else:
+                ax.set_xlabel('x [m]')
+                ax.set_ylabel('y [m]')
+
+        ax.set_aspect('equal')
+        fig.tight_layout()
+
+        # Set the plot title
+        if self.globalstarttime is None:
+            ax.set_title(f'{var} - t = {self.var["globaltime"][it]:.1f} Hr')
+        else:
+            ax.set_title(f'{var} - t = {self.var["globaltime"][it]}')
+
+        # Save the figure if required
+        if self.save_fig:
+            folder = os.path.join(self.model_path, 'fig', f'map_{var[0]}')
+            if not os.path.exists(folder):
+                os.mkdir(folder)
+            plt.savefig(os.path.join(folder, f'map_{var}_it_{it}.png'), dpi=200)
+
+        fig.tight_layout()
+
         return fig, ax
