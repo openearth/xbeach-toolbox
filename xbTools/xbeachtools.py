@@ -197,26 +197,41 @@ class XBeachModelSetup():
         self.wavefriction = wavefriction
         self.wavefriction_layer = wavefriction_layer
 
-    def set_waves(self,wbctype, input_struct):
-        """_summary_
+    def set_waves(self, wbctype, input_struct):
+        """
+        Set wave boundary conditions based on the specified wave boundary condition type (wbctype).
 
-        Args:
-            wbctype (_type_): _description_
-            input_struct (_type_): _description_
-        """        
+        Parameters:
+        - wbctype: str
+            Type of wave boundary condition. Options are 'jonstable' or 'parametric'.
+        - input_struct: dict
+            A dictionary containing the required parameters for the selected wave boundary condition type.
+
+        Attributes:
+        - self.wbctype: str
+            Stores the wave boundary condition type.
+        - self.waves_boundary: dict
+            Stores the wave boundary parameters extracted from input_struct.
+        """
+
+        # Store the wave boundary condition type
         self.wbctype = wbctype
-        ##
-        if wbctype=='jonstable':
-            required_par = ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc']
-        elif wbctype=='parametric':
-            required_par = ['Hm0','Tp','mainang','gammajsp','s','fnyq']
+
+        # Define required parameters based on the wave boundary condition type
+        if wbctype == 'jonstable':
+            required_par = ['Hm0', 'Tp', 'mainang', 'gammajsp', 's', 'duration', 'dtbc']
+        elif wbctype == 'parametric':
+            required_par = ['Hm0', 'Tp', 'mainang', 'gammajsp', 's', 'fnyq']
         else:
-            assert False, 'Wrong wbctype'
-        
-        self.waves_boundary  = {}
+            assert False, 'Invalid wbctype. Must be "jonstable" or "parametric".'
+
+        # Initialize a dictionary to store wave boundary parameters
+        self.waves_boundary = {}
+
+        # Check if all required parameters are present in input_struct and store them
         for item in required_par:
-            assert item in input_struct, '{} missing'.format(item)
-            self.waves_boundary[item] =  input_struct[item]
+            assert item in input_struct, f'{item} is missing from input_struct'
+            self.waves_boundary[item] = input_struct[item]
             
     def set_vegetation(self):
         """_summary_
@@ -365,6 +380,9 @@ class XBeachModelSetup():
             f.write('xfile\t= x.grd\n'.expandtabs(tabnumber))
             if not self.ygr is None:
                 f.write('yfile\t= y.grd\n'.expandtabs(tabnumber))
+            if not self.struct is None:
+                f.write('struct\t= 1\n'.expandtabs(tabnumber))
+                f.write('ne_layer\t= {}\n'.format('ne_bed.dep').expandtabs(tabnumber))
             f.write('depfile\t= bed.dep\n'.expandtabs(tabnumber))
             f.write('thetamin\t= {}\n'.format(self.thetamin).expandtabs(tabnumber))
             f.write('thetamax\t= {}\n'.format(self.thetamax).expandtabs(tabnumber))
@@ -495,18 +513,35 @@ class XBeachModelSetup():
         None.
 
         '''
+        if self.zs0type == 'list':
+            nsubplots = 4
+        else:
+            nsubplots = 3
         if self.wbctype=='jonstable':
             plt.figure()
-            plt.subplot(3,1,1)
+            plt.subplot(nsubplots,1,1)
             plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['Hm0'],'-o')
-            plt.ylabel('$H_{m0}$')
-            plt.subplot(3,1,2)
+            plt.ylabel('$H_{m0}$ [m]')
+            plt.subplot(nsubplots,1,2)
             plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['Tp'],'-o')
-            plt.ylabel('$T_{p}$')
-            plt.subplot(3,1,3)
+            plt.ylabel('$T_{p}$ [s[]]')
+            plt.subplot(nsubplots,1,3)
             plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['mainang'],'-o')
-            plt.ylabel('$D$')
-            plt.xlabel('Time')
+            plt.ylabel('$D$ [deg N]')
+            
+            if self.zs0type == 'list':
+                plt.subplot(nsubplots, 1, 4)
+                for icorner in range(self.zs0.shape[1]-1):
+                    plt.plot(self.zs0[:, 0], self.zs0[:,icorner+1],'-o')
+                plt.ylabel('zs [m]')
+                plt.xlabel('Time')    
+
+            else:
+                # plot xlabel on last subplot
+                plt.xlabel('Time')        
+            
+            plt.tight_layout()
+
             if save_path!=None:
                 plt.savefig(os.path.join(save_path,'jonstable.png'))
         elif self.wbctype=='parametric':
