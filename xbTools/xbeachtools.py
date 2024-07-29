@@ -550,7 +550,7 @@ class XBeachModelSetup():
         # Loop over the data and stack it together
         data = np.column_stack([variable_dict[key] for key in variable_dict.keys()])
 
-        string_variables = " ".join(variable_names)
+        string_variables = ",".join(variable_names)
         num_variables = len(variable_names)
 
         # Write the header and the data to a file
