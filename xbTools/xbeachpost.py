@@ -223,7 +223,7 @@ class XBeachModelAnalysis():
         # struct
         if ('struct' in self.params) == 1:
             self.grd['ne'] = np.loadtxt(os.path.join(self.model_path, self.params['ne_layer']))
-            assert self.grd['ne'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'ne grid not of correct size'
+            assert np.atleast_2d(self.grd['ne']).shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'ne grid not of correct size'
 
     def get_waves(self):
         """_summary_
