@@ -49,13 +49,28 @@ class XBeachModelSetup():
 
         Args:
             input_par_dict (_type_): _description_
-        """        
+        """    
+        ## create input_par if it does not exist yet
+        if not hasattr(self, 'input_par'):
+            self.input_par = {}
+        if not 'par' in self.input_par.keys():
+            self.input_par['par'] = {}
+
         ## set wavemodel. Default is Surfbeat
-        if 'wavemodel' not in input_par_dict:
-            print('No wavemodel defined. Wavemodel is set to Surfbeat')
-            self.wavemodel = 'surfbeat'
+        if '_General' not in self.input_par:
+            # then this is the first time set params on this class:
+            if ('wavemodel' not in input_par_dict):
+                print('No wavemodel defined. Wavemodel is set to Surfbeat')
+                self.wavemodel = 'surfbeat'
+            else:
+                self.wavemodel = input_par_dict['wavemodel']
         else:
-            self.wavemodel = input_par_dict['wavemodel']
+            if 'wavemodel' in input_par_dict:
+                print('Mind you: Wave model overwritten to {}'.format(input_par_dict['wavemodel']))
+                self.wavemodel = input_par_dict['wavemodel']
+            else: 
+                pass
+
         
         ## set wbctype
         if 'wbctype' in input_par_dict:
@@ -65,11 +80,10 @@ class XBeachModelSetup():
         ## load parameters and categories
         f           = open(os.path.join(os.path.dirname(__file__), 'par.json'),'r')
         par_dict    = json.loads(f.read())
-        ## create input dict
-        self.input_par = {}
-        self.input_par['par'] = {}
+
+
+
         ## loop over input parameters 
-        
         for input_par in input_par_dict:
             value_added = False
             ## loop over categories
