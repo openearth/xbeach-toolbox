@@ -80,6 +80,34 @@ class XBeachModelAnalysis():
                     break
         self.metadata = meta_dictionary # store to class
 
+        self.get_mpi_boundaries()
+
+    def get_mpi_boundaries(self):
+        '''
+        function to get mpi boundaries from XBlog.txt
+        '''
+        data = []
+        with open(self.model_path+'\\XBlog.txt') as file:
+            line = file.readline()
+            while not('computational domains on processors' in line):
+                line = file.readline()
+            cols = file.readline()
+            
+            line = file.readline()
+            while not ('----') in line:               
+                data.append([float(x) for x in line.split()])
+                line = file.readline()
+        if data!=[]:
+            # do something with the data
+            data = np.array(data)
+            ixstop = data[:, 2]
+            iystop = data[:, 4]
+            self.mpi_ix = np.unique(ixstop)
+            self.mpi_iy = np.unique(iystop)
+        else:
+            self.mpi_ix = []
+            self.mpi_iy = []
+
     def __repr__(self):
         return self.fname
 
@@ -490,7 +518,7 @@ class XBeachModelAnalysis():
         #read long name and units from netcdf
         self.long_name[var] = ds.variables[var].long_name
         self.units[var] = ds.variables[var].units
-
+        
     def get_modeloutput(self, var):
         """_summary_
 
@@ -677,7 +705,7 @@ class XBeachModelAnalysis():
 
         return fig, ax
 
-    def fig_map_var(self, var, label=None, it=np.inf, figsize=None, figax=None, **kwargs):
+    def fig_map_var(self, var, label=None, it=np.inf, figsize=None, figax=None, japlot_mpi_boundaries = False, **kwargs):
         """_summary_
 
         Args:
@@ -737,7 +765,13 @@ class XBeachModelAnalysis():
 
 
         fig, ax = self._fig_map_var(data, label, figsize, figax=figax, **kwargs)
-            
+
+        if japlot_mpi_boundaries:
+            for iy in self.mpi_iy:
+                ax.plot(self.grd['x'][int(iy)-1, :], self.grd['y'][int(iy)-1, :], 'k', linewidth=0.5)
+            for ix in self.mpi_ix:
+                ax.plot(self.grd['x'][:,int(ix)-1], self.grd['y'][:,int(ix)-1], 'k', linewidth=0.5)     
+
         if self.globalstarttime is None:
             ax.set_title('{:.1f}Hr'.format(self.var['globaltime'][it] ))
         else:
