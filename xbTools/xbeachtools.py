@@ -360,7 +360,7 @@ class XBeachModelSetup():
             with open(os.path.join(path,'jonstable.txt'),'w') as f:
                 for ii in range(len(self.waves_boundary['Hm0'])):
                     for par in required_par:
-                        f.write('{} '.format(self.waves_boundary[par][ii]))
+                        f.write('{:.2f} '.format(self.waves_boundary[par][ii]))
                     f.write('\n')
         
         
@@ -538,7 +538,7 @@ class XBeachModelSetup():
             plt.ylabel('$H_{m0}$ [m]')
             plt.subplot(nsubplots,1,2)
             plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['Tp'],'-o')
-            plt.ylabel('$T_{p}$ [s[]]')
+            plt.ylabel('$T_{p}$ [s]')
             plt.subplot(nsubplots,1,3)
             plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['mainang'],'-o')
             plt.ylabel('$D$ [deg N]')
