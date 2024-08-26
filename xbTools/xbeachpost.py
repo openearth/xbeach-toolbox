@@ -445,17 +445,17 @@ class XBeachModelAnalysis():
             return
 
         if '_mean' in var:
-            assert sum([var[:-5] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
+            assert sum([var[:-5] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'.format(var)
         elif '_var' in var:
-            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
+            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'.format(var)
         elif '_min' in var:
-            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
+            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'.format(var)
         elif '_max' in var:
-            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
+            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'.format(var)
         elif 'point_' in var:
-            assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'
+            assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'.format(var)
         else:
-            assert sum([var in x for x in self.params['globalvar']]) > 0, '{} not in xb output'
+            assert sum([var in x for x in self.params['globalvar']]) > 0, '{} not in xb output'.format(var)
 
         # if not yet present, load coordinates
         if self.var == {}:
