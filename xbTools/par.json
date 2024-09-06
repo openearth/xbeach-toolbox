@@ -139,6 +139,12 @@
         "dryslp",
         "fixedavaltime"
     ],
+    "Hotstart": [
+        "writehotstart",
+        "hotstart",
+        "hotstartfileno",
+        "tinth",
+    ],
     "Output": [
         "outputformat",
         "tintg",
