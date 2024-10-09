@@ -290,7 +290,7 @@ class XBeachModelAnalysis():
             else:
                 loctime = dat[:, 0]
                 globtime = np.array([np.timedelta64(int(x), 's') for x in loctime]) + self.globalstarttime
-                self.waves_boundary['time'] = globtime
+                self.tide['time'] = globtime
 
             return self.tide
         
@@ -572,12 +572,10 @@ class XBeachModelAnalysis():
         zs0_tide = self.tide['zs0']
         if self.globalstarttime is None:
             t_tide = self.tide['time'] / 3600
-            t = self.var['globaltime'] / 3600
+            t = self.var['meantime'] / 3600
         else:
-            t_tide = np.array(
-                [np.timedelta64(int(x), 's') for x in self.tide['time']]) \
-                     + self.globalstarttime
-            t = self.var['globaltime']
+            t_tide = self.tide['time']
+            t = self.var['meantime']
 
         lent = min([len(zs), len(t)])
         tideloc = self.params['tideloc']
