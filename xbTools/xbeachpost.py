@@ -21,7 +21,7 @@ import xbTools as xb
 import warnings
 import re
 # toolbox specific import
-from .general.geometry import rotate_grid
+from .general.geometry import rotate_grid, path_distance
 
 class XBeachModelAnalysis():
     '''
@@ -60,7 +60,8 @@ class XBeachModelAnalysis():
                           'u_max', 'v_max', 'ue_max', 've_max', 'Subg_max', 'Svbg_max', 'Susg_max', 'Svsg_max',
                           'u_min', 'v_min', 'ue_min', 've_min', 'Subg_min', 'Svbg_min', 'Susg_min', 'Svsg_min']
 
-
+        self._cross_offset = 0
+        
     def get_metadata(self):
         '''
         function to print metadata from XBlog.txt
@@ -78,6 +79,34 @@ class XBeachModelAnalysis():
                 if 'Finished reading input parameters' in line: # notice finished readline line, then break
                     break
         self.metadata = meta_dictionary # store to class
+
+        self.get_mpi_boundaries()
+
+    def get_mpi_boundaries(self):
+        '''
+        function to get mpi boundaries from XBlog.txt
+        '''
+        data = []
+        with open(self.model_path+'\\XBlog.txt') as file:
+            line = file.readline()
+            while not('computational domains on processors' in line):
+                line = file.readline()
+            cols = file.readline()
+            
+            line = file.readline()
+            while not ('----') in line:               
+                data.append([float(x) for x in line.split()])
+                line = file.readline()
+        if data!=[]:
+            # do something with the data
+            data = np.array(data)
+            ixstop = data[:, 2]
+            iystop = data[:, 4]
+            self.mpi_ix = np.unique(ixstop)
+            self.mpi_iy = np.unique(iystop)
+        else:
+            self.mpi_ix = []
+            self.mpi_iy = []
 
     def __repr__(self):
         return self.fname
@@ -186,9 +215,17 @@ class XBeachModelAnalysis():
         if params['npointvar'] > 0:
             i0 = [i for i, var in enumerate(dat) if 'npoints' in var][0]
             points = dat[i0 + 1:i0 + int(params['npoints'] + 1)]
-            x = [float( re.split('\t| ',t)[0] ) for t in points]
-            y = [float(re.split('\t| ',t)[1] ) for t in points]
-            name = [t[2].strip() for t in points]
+
+            # get points 
+            p_spl = [ re.split('\t| ',t) for t in points]
+            # remove empty entries
+            p_spl = [[p for p in p_spli if p.split()] for p_spli in p_spl]
+            # xy
+            x = [float(p[0] ) for p in p_spl]
+            y = [float(p[1]) for p in p_spl]
+            # if names are there list of names else index
+            name = [p[2].strip() if len(p)>2 else str(ip) for ip, p in enumerate(p_spl)]
+
             params['points'] = dict(zip(name, zip(x, y)))
         else:
             params['points'] = {}
@@ -387,31 +424,9 @@ class XBeachModelAnalysis():
             self.var['station_x'] = ds.variables['pointx'][:]
             self.var['station_y'] = ds.variables['pointy'][:]
 
-        def path_distance(polx, poly):
-            '''
-            computes the distance along a polyline
-            ----------
-            polx : TYPE array
-                X COORDINATES.
-            poly : TYPE array
-                Y COORDINATES.
+        cross = path_distance(x[0, :], y[0, :])
+        self.var['cross'] = cross + self._cross_offset
 
-            Returns: TYPE array
-                PATHDISTANCE
-            -------
-            python alternative to matlab function.
-
-            '''
-            dx = np.diff(polx)
-            dy = np.diff(poly)
-
-            dr = np.sqrt(dx ** 2 + dy ** 2)
-
-            pathdistance = np.insert(np.cumsum(dr), 0, 0, axis=0)
-
-            return pathdistance
-
-        self.var['cross'] = path_distance(x[0, :], y[0, :])
         self.var['along'] = path_distance(x[:, 0], y[:, 0])
 
         # self.var['localy'], self.var['localx'] = np.meshgrid(self.var['cross'], self.var['along'])
@@ -434,6 +449,13 @@ class XBeachModelAnalysis():
 
 
         return
+
+    def add_cross_offset(self, offset):
+        """
+        adds an offset value to the computed cross-shore local coordinate system (such that it does not start at zero at offshore boundary)
+        """
+        self._cross_offset = offset
+        self.load_output_coordinates()
 
     def load_modeloutput(self, var):
         """_summary_
@@ -496,7 +518,7 @@ class XBeachModelAnalysis():
         #read long name and units from netcdf
         self.long_name[var] = ds.variables[var].long_name
         self.units[var] = ds.variables[var].units
-
+        
     def get_modeloutput(self, var):
         """_summary_
 
@@ -681,7 +703,7 @@ class XBeachModelAnalysis():
 
         return fig, ax
 
-    def fig_map_var(self, var, label=None, it=np.inf, figsize=None, figax=None, **kwargs):
+    def fig_map_var(self, var, label=None, it=np.inf, figsize=None, figax=None, japlot_mpi_boundaries = False, **kwargs):
         """_summary_
 
         Args:
@@ -741,7 +763,13 @@ class XBeachModelAnalysis():
 
 
         fig, ax = self._fig_map_var(data, label, figsize, figax=figax, **kwargs)
-            
+
+        if japlot_mpi_boundaries:
+            for iy in self.mpi_iy:
+                ax.plot(self.grd['x'][int(iy)-1, :], self.grd['y'][int(iy)-1, :], 'k', linewidth=0.5)
+            for ix in self.mpi_ix:
+                ax.plot(self.grd['x'][:,int(ix)-1], self.grd['y'][:,int(ix)-1], 'k', linewidth=0.5)     
+
         if self.globalstarttime is None:
             ax.set_title('{:.1f}Hr'.format(self.var['globaltime'][it] ))
         else:
