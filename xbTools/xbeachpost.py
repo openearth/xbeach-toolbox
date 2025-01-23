@@ -86,27 +86,28 @@ class XBeachModelAnalysis():
         '''
         function to get mpi boundaries from XBlog.txt
         '''
-        data = []
-        with open(self.model_path+'\\XBlog.txt') as file:
-            line = file.readline()
-            while not('computational domains on processors' in line):
-                line = file.readline()
-            cols = file.readline()
-            
-            line = file.readline()
-            while not ('----') in line:               
-                data.append([float(x) for x in line.split()])
-                line = file.readline()
-        if data!=[]:
-            # do something with the data
-            data = np.array(data)
-            ixstop = data[:, 2]
-            iystop = data[:, 4]
-            self.mpi_ix = np.unique(ixstop)
-            self.mpi_iy = np.unique(iystop)
-        else:
+        # first check if it is run with mpi
+        if np.sum([1 if 'computational domains on processors' in x else 0 for x in self.metadata])==0:
             self.mpi_ix = []
-            self.mpi_iy = []
+            self.mpi_iy = []           
+            return
+        else:
+            icdps = [True if 'computational domains on processors' in x else False for x in self.metadata]
+            icdp = np.argwhere(icdps)[0][0]
+            iadd = 0
+            while not ('----') in line:       
+                iadd+=1        
+                data.append([float(x) for x in self.metadata[int(iadd+icdp)].split()])
+                line = self.metadata[int(iadd+icdp+1)]
+            if data!=[]:
+                # do something with the data
+                data = np.array(data)
+                ixstop = data[:, 2]
+                iystop = data[:, 4]
+                self.mpi_ix = np.unique(ixstop)
+                self.mpi_iy = np.unique(iystop)
+            return
+
 
     def __repr__(self):
         return self.fname
@@ -174,9 +175,16 @@ class XBeachModelAnalysis():
         f = open(os.path.join(self.model_path, 'params.txt'), 'r')
         dat = f.read().split('\n')
 
+        # remove empty elements
+        dat = [x for x in dat if not(len(x)==0)]
+
+        # remove elements that are commented out with non alfanumeric character
+        dat = [x for x in dat if (x.replace(' ', '')[0].isalnum())]    
+
         # read params from params file
         params = {}
         for d in dat:
+
             if '=' in d:
                 x1, x2 = d.split('=')
                 if x2.strip().isnumeric():
