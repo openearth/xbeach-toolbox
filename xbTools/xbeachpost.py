@@ -37,8 +37,7 @@ class XBeachModelAnalysis():
         """        
         self.fname = fname
         self.model_path = model_path
-        self.get_params()
-        self.get_metadata()
+
 
         # self.params = None
         self.grd = {}
@@ -60,8 +59,12 @@ class XBeachModelAnalysis():
                           'u_max', 'v_max', 'ue_max', 've_max', 'Subg_max', 'Svbg_max', 'Susg_max', 'Svsg_max',
                           'u_min', 'v_min', 'ue_min', 've_min', 'Subg_min', 'Svbg_min', 'Susg_min', 'Svsg_min']
 
+        self.get_params()
+        self.get_metadata()
+        self.load_grid()
         self._cross_offset = 0
-        
+        self.load_output_coordinates()
+
     def get_metadata(self):
         '''
         function to print metadata from XBlog.txt
@@ -267,8 +270,9 @@ class XBeachModelAnalysis():
             assert self.grd['y'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'y grid not of correct size'
         # struct
         if ('struct' in self.params) == 1:
-            self.grd['ne'] = np.loadtxt(os.path.join(self.model_path, self.params['ne_layer']))
-            assert np.atleast_2d(self.grd['ne']).shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'ne grid not of correct size'
+            if self.params['struct']==1:
+                self.grd['ne'] = np.loadtxt(os.path.join(self.model_path, self.params['ne_layer']))
+                assert np.atleast_2d(self.grd['ne']).shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'ne grid not of correct size'
 
     def get_waves(self):
         """_summary_
@@ -335,7 +339,7 @@ class XBeachModelAnalysis():
             else:
                 loctime = dat[:, 0]
                 globtime = np.array([np.timedelta64(int(x), 's') for x in loctime]) + self.globalstarttime
-                self.waves_boundary['time'] = globtime
+                self.tide['time'] = globtime
 
             return self.tide
         
@@ -602,12 +606,10 @@ class XBeachModelAnalysis():
         zs0_tide = self.tide['zs0']
         if self.globalstarttime is None:
             t_tide = self.tide['time'] / 3600
-            t = self.var['globaltime'] / 3600
+            t = self.var['meantime'] / 3600
         else:
-            t_tide = np.array(
-                [np.timedelta64(int(x), 's') for x in self.tide['time']]) \
-                     + self.globalstarttime
-            t = self.var['globaltime']
+            t_tide = self.tide['time']
+            t = self.var['meantime']
 
         lent = min([len(zs), len(t)])
         tideloc = self.params['tideloc']
