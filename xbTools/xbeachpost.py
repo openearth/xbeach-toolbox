@@ -57,7 +57,8 @@ class XBeachModelAnalysis():
         self.vector_vars = ['u', 'v', 'ue', 've', 'Subg', 'Svbg', 'Susg', 'Svsg',
                           'u_mean', 'v_mean', 'ue_mean', 've_mean', 'Subg_mean', 'Svbg_mean', 'Susg_mean', 'Svsg_mean',
                           'u_max', 'v_max', 'ue_max', 've_max', 'Subg_max', 'Svbg_max', 'Susg_max', 'Svsg_max',
-                          'u_min', 'v_min', 'ue_min', 've_min', 'Subg_min', 'Svbg_min', 'Susg_min', 'Svsg_min']
+                          'u_min', 'v_min', 'ue_min', 've_min', 'Subg_min', 'Svbg_min', 'Susg_min', 'Svsg_min',
+                          ]
 
         self.get_params()
         self.get_metadata()
@@ -419,7 +420,7 @@ class XBeachModelAnalysis():
                 data = ds.variables['pointtime'][:]
                 data = data[data.mask == False]
                 self.var['pointtime'] = np.array(
-                    [np.timedelta64(int(x), 's') for x in data.data.flatten()]) \
+                    [np.timedelta64(int(1000*x), 'ms') for x in data.data.flatten()]) \
                                          + self.globalstarttime
 
             station_list = []
@@ -946,7 +947,7 @@ class XBeachModelAnalysis():
 
 
     
-    def fig_cross_var(self,var, it, iy=None, itype=None, coord=None, plot_ref_bathy=True, figax = None, zmin=-25, ylim=None, fmt='.-'):
+    def fig_cross_var(self,var, it, iy=None, itype=None, coord=None, plot_ref_bathy=True, remove_dry_points=False, figax = None, zmin=-25, ylim=None, fmt='.-'):
         """_summary_
 
         Args:
@@ -1010,6 +1011,14 @@ class XBeachModelAnalysis():
                 data = np.where(~dat1.mask, data_along, np.nan).flatten()  # make 0d again after rotation operation       
             
         cross = self.var['cross']     
+
+        if remove_dry_points:
+            try:
+                self.load_modeloutput('zs_min')
+                self.load_modeloutput('zb_mean')
+                data = np.where((self.var['zs_min'][it, iy, :]-self.var['zb_mean'][it, iy, :]).flatten()>=0.01, data, np.nan)
+            except:
+                print('zs_min or zb_mean not saved on file, so no dry points are removed from the plot')
 
         if figax is None:
             fig, ax1 = plt.subplots(figsize=[5, 3])
