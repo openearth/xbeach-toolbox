@@ -279,7 +279,7 @@ class XBeachModelAnalysis():
         """_summary_
         """
         # waves boundary
-        if self.params['wbctype'] == 'jonstable' or self.params['wbctype']=='reuse':
+        if self.params['wbctype'] == 'jonstable':
             dat = np.loadtxt(os.path.join(self.model_path, self.params['bcfile']))
             assert dat.shape[1] == 7, \
                 'columns of jonstable should exactly be: Hm0, Tp, mainang, gammajsp, s, duration, dtbc'
@@ -409,9 +409,12 @@ class XBeachModelAnalysis():
             else:
                 data = ds.variables['meantime'][:]
                 data = data[data.mask == False]
-                self.var['meantime'] = np.array(
-                    [np.timedelta64(int(x), 's') for x in data.data.flatten()]) \
-                                         + self.globalstarttime
+                if len(data)>0:
+                    self.var['meantime'] = np.array(
+                        [np.timedelta64(int(x), 's') for x in data.data.flatten()]) \
+                                            + self.globalstarttime
+                else:
+                    self.var['meantime'] = []
         # point variable time
         if self.params['npointvar'] > 0:
             if self.globalstarttime is None:
@@ -420,7 +423,7 @@ class XBeachModelAnalysis():
                 data = ds.variables['pointtime'][:]
                 data = data[data.mask == False]
                 self.var['pointtime'] = np.array(
-                    [np.timedelta64(int(1000*x), 'ms') for x in data.data.flatten()]) \
+                    [np.timedelta64(int(x), 's') for x in data.data.flatten()]) \
                                          + self.globalstarttime
 
             station_list = []
@@ -854,19 +857,6 @@ class XBeachModelAnalysis():
             dat1 = self.get_modeloutput('Susg_min')
             dat2 = self.get_modeloutput('Svsg_min')
 
-        if var in ['point_ue', 'point_ve']: 
-            dat1 = self.get_modeloutput('point_ue')
-            dat2 = self.get_modeloutput('point_ve')
-        elif var in ['point_u', 'point_v']:
-            dat1 = self.get_modeloutput('point_u')
-            dat2 = self.get_modeloutput('point_v')
-        elif var in ['point_Subg', 'point_Svbg']:
-            dat1 = self.get_modeloutput('point_Subg')
-            dat2 = self.get_modeloutput('point_Svbg')
-        elif var in ['point_Susg', 'point_Svsg']:
-            dat1 = self.get_modeloutput('point_Susg')
-            dat2 = self.get_modeloutput('point_Svsg')            
-
         return dat1, dat2
     
     def fig_map_diffvar(self, var, label, it0=0, itend=np.inf, clim=None, figsize=None, **kwargs):
@@ -979,13 +969,12 @@ class XBeachModelAnalysis():
         try:
             self.load_modeloutput(var)
         except:
-            print('{} not found on xboutput and also not added to ds.variables. No figure plotted'.format(var))
-            return [], []
+            print('var not found as output specified in params. Will try to continue to see if computed earlier')
         self.load_modeloutput('zb')
 
         x = self.var['globalx']
         y = self.var['globaly']
-        if ('_mean' in var) or ('_min' in var) or ('_max' in var) or ('_var' in var):
+        if '_mean' in var:
             t = self.var['meantime'][it]
         else:
             t = self.var['globaltime'][it]
@@ -998,12 +987,12 @@ class XBeachModelAnalysis():
                 if itype is None:
                     print('using first sed type for printing. For others, set itype>=1')
                     itype = 0
-                data = self.var[var][it, itype, iy, :].flatten()
+                data = self.var[var][it, itype, iy, :]
             else:
-                data = self.var[var][it, iy, :].flatten()
+                data = self.var[var][it, iy, :]
 
         else:
-            print('{} is rotated to gridori in the postprocessing scripts'.format(var))
+            print('this variable is rotated to gridori in the postprocessing scripts')
             dat1, dat2 = self._get_var_vector_pair(var)
             if len(self.var[var].shape)==4:
                 if itype is None:
