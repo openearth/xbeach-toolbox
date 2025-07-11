@@ -501,11 +501,7 @@ class XBeachModelAnalysis():
 
         if '_mean' in var:
             assert sum([var[:-5] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'.format(var)
-        elif '_var' in var:
-            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'.format(var)
-        elif '_min' in var:
-            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'.format(var)
-        elif '_max' in var:
+        elif any(substr in var for substr in ['min', '_max', '_var']):
             assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'.format(var)
         elif 'point_' in var:
             assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'.format(var)
@@ -521,11 +517,16 @@ class XBeachModelAnalysis():
         print('loading variable {} from file'.format(var))
         dat = ds.variables[var][:]
 
-        #mean and point output might not be availble if the eor is not reached. Therefore cut
+        #mean and point output might not be available if the eor is not reached. Therefore cut
         if 'point_' in var and len(np.atleast_1d(dat.mask)) > 1:
-            dat = dat[~dat.mask[:, 0], :]
-        elif dat.ndim == 3 and '_mean' in var and len(np.atleast_1d(dat.mask)) > 1:
+            if len(dat.shape)==2:
+                dat = dat[~dat.mask[:, 0], :]
+            elif len(dat.shape)==3:
+                dat = dat[~dat.mask[:, 0, 0], 0, :]
+        elif dat.ndim == 3 and any(substr in var for substr in ['_mean', '_min', '_max', '_var']) and len(np.atleast_1d(dat.mask)) > 1:
             dat = dat[~dat.mask[:, 0, 0], :, :]
+        elif dat.ndim == 4 and any(substr in var for substr in ['_mean', '_min', '_max', '_var']) and len(np.atleast_1d(dat.mask)) > 1:
+            dat = dat[~dat.mask[:, 0, 0, 0], :, :, :]
         elif dat.ndim == 2 and '_mean' in var and len(np.atleast_1d(dat.mask)) > 1:
             # 1D case
             pass
@@ -997,7 +998,7 @@ class XBeachModelAnalysis():
 
         x = self.var['globalx']
         y = self.var['globaly']
-        if '_mean' in var:
+        if any(substr in var for substr in ['_mean', '_min', '_max', '_var']):
             t = self.var['meantime'][it]
         else:
             t = self.var['globaltime'][it]
@@ -1039,12 +1040,22 @@ class XBeachModelAnalysis():
         cross = self.var['cross']     
 
         if remove_dry_points:
-            try:
-                self.load_modeloutput('zs_min')
-                self.load_modeloutput('zb_mean')
-                data = np.where((self.var['zs_min'][it, iy, :]-self.var['zb_mean'][it, iy, :]).flatten()>=0.01, data, np.nan)
-            except:
-                print('zs_min or zb_mean not saved on file, so no dry points are removed from the plot')
+            if any(substr in var for substr in ['_mean', '_min', '_max', '_var']):
+                try:
+                    self.load_modeloutput('zs_min')
+                    self.load_modeloutput('zb_mean')
+                    data = np.where((self.var['zs_min'][it, iy, :]-self.var['zb_mean'][it, iy, :]).flatten()>=0.01, data, np.nan)
+                except:
+                    print('zs_min or zb_mean not saved on file, so no dry points are removed from the plot')
+            else:
+                try:
+                    self.load_modeloutput('zs')
+                    self.load_modeloutput('zb')
+                    data = np.where((self.var['zs'][it, iy, :]-self.var['zb'][it, iy, :]).flatten()>=0.01, data, np.nan)    
+                except:
+                    print('zs or zb not saved on file, so no dry points are removed from the plot')            
+                                
+            
 
         if figax is None:
             fig, ax1 = plt.subplots(figsize=[5, 3])
