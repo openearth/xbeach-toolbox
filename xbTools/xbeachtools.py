@@ -62,25 +62,19 @@ class XBeachModelSetup():
         """        
 
         ## set wavemodel. Default is Surfbeat
-        if '_General' not in self.input_par:
-            # then this is the first time set params on this class:
-            if ('wavemodel' not in input_par_dict):
-                print('No wavemodel defined. Wavemodel is set to Surfbeat')
-                self.wavemodel = 'surfbeat'
-            else:
-                self.wavemodel = input_par_dict['wavemodel']
+        if 'wavemodel' not in input_par_dict:
+            print('No wavemodel defined. Wavemodel is set to Surfbeat')
+            self.wavemodel = 'surfbeat'
         else:
-            if 'wavemodel' in input_par_dict:
-                print('Mind you: Wave model overwritten to {}'.format(input_par_dict['wavemodel']))
-                self.wavemodel = input_par_dict['wavemodel']
-            else: 
-                pass
-
+            self.wavemodel = input_par_dict['wavemodel']
         
         ## set wbctype
         if 'wbctype' in input_par_dict:
             self.wbctype = input_par_dict['wbctype'] 
-        
+        elif not(self.wbctype is None):
+            # if the wbctype was already specified through prescribing the right boundary conditions, than infer the wbctype from there
+            input_par_dict['wbctype'] = self.wbctype
+
         # Get the json file that contains all of the parameters in ther proper subsection so that the self.input_par
         # can be put under the right headers
         folder_path = os.path.dirname(__file__)
@@ -88,9 +82,14 @@ class XBeachModelSetup():
         # Add store it in the class
         self.json_param_dict = get_json(folder_path, file_name = json_file_name)
 
-        ## load parameters and categories
-        f           = open(os.path.join(os.path.dirname(__file__), 'par.json'),'r')
-        par_dict    = json.loads(f.read())
+        ## create input dict
+        self.input_par = {}
+
+        # Init 'par' key as a nested dict
+        self.input_par['par'] = {}
+
+        # Init flag to track if parameters aren't found in the JSON
+        not_found_params = False
 
         ## loop over input parameters 
         for input_par in input_par_dict:
@@ -274,11 +273,11 @@ class XBeachModelSetup():
                           'vardens'      : False,
                            'off'         : False,
                            'jonstable'   : ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc'],
-                           'resuse'      : False, 
+                           'reuse'       : False, 
                            'ts_1'        : False, 
                            'ts_2'        : False, 
                            'ts_nonh'     : ["make_file", "file_name", "dimension", "variable_dict"],
-                           'parametric': ['Hm0','Tp','mainang','gammajsp','s','fnyq']
+                           'parametric'  : ['Hm0','Tp','mainang','gammajsp','s','fnyq']
                            }
 
         try:
@@ -375,8 +374,8 @@ class XBeachModelSetup():
         See the called functions for more information on the boundary conditions
         """        
         self.wbctype = wbctype
-        
-        # Get the thr requried input parameters
+
+        # Get the thr required input parameters
 
         if not instat_bc:
             # Use the wbctype conditions
@@ -606,18 +605,14 @@ class XBeachModelSetup():
                 #TODO: Think of a more elegant way to do this that is more future proof
                 # Get number of entries under the first key
                 num_vals = len(self.waves_boundary['Hm0'])
-                
-        elif self.wbctype=='jonstable':
-            if 'Wave boundary condition parameters' in self.input_par:
-                self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonstable.txt'
-            else:
-               self.input_par['Wave boundary condition parameters'] = {}
-               self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonstable.txt'                
-            required_par = ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc']
-            with open(os.path.join(path,'jonstable.txt'),'w') as f:
-                for ii in range(len(self.waves_boundary['Hm0'])):
-                    for par in required_par:
-                        f.write('{:.2f} '.format(self.waves_boundary[par][ii]))
+    
+                # Loop over each row of the table...
+                for i in range(num_vals):
+                    # Write the param vals into each column
+                    for param in self.required_wbc_params:
+                        f.write('{} '.format(self.waves_boundary[param][i]))
+                    
+                    # Set up the next row
                     f.write('\n')
     
     def _write_wbc_file(self, path, num_dec_dig):
@@ -738,7 +733,7 @@ class XBeachModelSetup():
         # The JSON file can be put in the same order of the xBlog file making comparing the sections easier
         ordered_param_dict = {k: self.input_par[k] for k in self.json_param_dict if k in self.input_par}
 
-        if "wbctype" not in ordered_param_dict["Wave boundary condition parameters"].keys():
+        if "Wave boundary condition parameters" not in ordered_param_dict.keys():
             print(("\nWARNING: Include the wbctype in the set_params function. "
                    "In the process of moving away from printing the "
                    "wbctype at the top of the params.txt file"

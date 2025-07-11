@@ -204,8 +204,9 @@
         "writehotstart",
         "hotstart",
         "hotstartfileno",
-        "tinth",
+        "tinth"
     ],
+
     "Output": [
         "outputformat",
         "tintg",
@@ -217,12 +218,13 @@
         "outputprecision",
         "timings"
     ],
-  
+
     "_Output": [
         "nglobalvar",
         "nmeanvar",
         "npointvar",
         "npoints"
+    ], 
     
     "par":[
         "This will store parameters that are missing from all the other sections"
