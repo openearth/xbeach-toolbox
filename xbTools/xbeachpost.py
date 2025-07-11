@@ -507,11 +507,10 @@ class XBeachModelAnalysis():
         elif 'point_' in var:
             assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'.format(var)
         else:
-
-        # Check if the variable is one of the outputted global variables from the model
-        if var not in self.params['globalvar']:
-            raise IndexError("Variable is not an available globalvar output." + 
-                             " The available outputs are {}".format(self.params["globalvar"]))
+            # Check if the variable is one of the outputted global variables from the model
+            if var not in self.params['globalvar']:
+                raise IndexError("Variable is not an available globalvar output." + 
+                                    " The available outputs are {}".format(self.params["globalvar"]))
 
         # if not yet present, load coordinates
         if self.var == {}:
