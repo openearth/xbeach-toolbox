@@ -8,6 +8,7 @@ module contains class for analysis of 2D XBeach models
 note that output and input must be available in directory
 """
 import numpy as np
+import pandas as pd
 import os
 import netCDF4 as nc
 import matplotlib.pyplot as plt
@@ -254,12 +255,15 @@ class XBeachModelAnalysis():
         if self.grd['x'].ndim==1:
             self.grd['x']= self.grd['x'][np.newaxis, ...] 
 
-        assert self.grd['x'].shape == (self.params['ny']+1, self.params['nx']+1), 'x grid not of correct size'
+        if (self.grd['x'].shape != (self.params['ny']+1, self.params['nx']+1)):
+            print('warning: x grid not of size specified in params.txt')
 
         self.grd['z'] = np.loadtxt(os.path.join(self.model_path, self.params['depfile']))
         if self.grd['z'].ndim==1:
             self.grd['z']= self.grd['z'][np.newaxis, ...] 
-        assert self.grd['z'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'z grid not of correct size'
+        if (self.grd['z'].shape != (self.params['ny'] + 1, self.params['nx'] + 1)):
+            print('warning: z grid not of size specified in params.txt')
+
         ## set posdwn
         if 'posdwn' in self.params:
             if int(self.params['posdwn']) == 1:
@@ -268,7 +272,8 @@ class XBeachModelAnalysis():
         # read y
         if self.params['ny'] > 0:
             self.grd['y'] = np.loadtxt(os.path.join(self.model_path, self.params['yfile']))
-            assert self.grd['y'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'y grid not of correct size'
+            if (self.grd['y'].shape != (self.params['ny'] + 1, self.params['nx'] + 1)):
+                print('warning: y grid not of size specified in params.txt')
         # struct
         if ('struct' in self.params) == 1:
             if self.params['struct']==1:
@@ -304,6 +309,18 @@ class XBeachModelAnalysis():
             self.waves_boundary['Tp'] = float(self.params['Trep'])
             self.waves_boundary['mainang'] = float( self.params['dir0'])
             self.waves_boundary['s'] = float(self.params['m']/2)
+
+        elif self.params['wbctype'] == 'ts_nonh':
+            dat = pd.read_csv(os.path.join(self.model_path, 'boun_U.bcf'), skiprows=2, header=0, sep=' ')
+            for key in dat.keys():
+                if key=='t':
+                    if self.globalstarttime is None:
+                        self.waves_boundary['time'] = dat['t'].values
+                    else:
+                        globtime = np.array([np.timedelta64(int(1e6*x), 'us') for x in dat['t'].values]) + self.globalstarttime
+                        self.waves_boundary['time'] = globtime
+                else:
+                    self.waves_boundary[key] = dat[key].values
         else:
             print('not possible')
             pass
@@ -400,7 +417,7 @@ class XBeachModelAnalysis():
         if self.globalstarttime is None:
             self.var['globaltime'] = ds.variables['globaltime'][:]
         else:
-            self.var['globaltime'] = np.array([np.timedelta64(int(x), 's') for x in ds.variables['globaltime'][:].data]) \
+            self.var['globaltime'] = np.array([np.timedelta64(int(1e3*x), 'ms') for x in ds.variables['globaltime'][:].data]) \
                                       + self.globalstarttime
         # mean variable time
         if self.params['nmeanvar'] > 0:
@@ -411,7 +428,7 @@ class XBeachModelAnalysis():
                 data = data[data.mask == False]
                 if len(data)>0:
                     self.var['meantime'] = np.array(
-                        [np.timedelta64(int(x), 's') for x in data.data.flatten()]) \
+                        [np.timedelta64(int(1e3*x), 'ms') for x in data.data.flatten()]) \
                                             + self.globalstarttime
                 else:
                     self.var['meantime'] = []
@@ -423,7 +440,7 @@ class XBeachModelAnalysis():
                 data = ds.variables['pointtime'][:]
                 data = data[data.mask == False]
                 self.var['pointtime'] = np.array(
-                    [np.timedelta64(int(x), 's') for x in data.data.flatten()]) \
+                    [np.timedelta64(int(1e6*x), 'us') for x in data.data.flatten()]) \
                                          + self.globalstarttime
 
             station_list = []
@@ -547,7 +564,7 @@ class XBeachModelAnalysis():
         self.load_modeloutput(var)
         return self.var[var]
 
-    def get_modeloutput_by_station(self, var, station):
+    def get_modeloutput_by_station(self, var, station, isedlayer=None):
         """_summary_
 
         Args:
@@ -571,7 +588,13 @@ class XBeachModelAnalysis():
         lentvar = len(self.var[var][:, 0])
         Nt = np.min([lent, lentvar])
 
-        return self.var['pointtime'][:Nt-1], self.var[var][:Nt-1, index]
+        if len(self.var[var].shape)==2:
+            return self.var['pointtime'][:Nt-1], self.var[var][:Nt-1, index]
+        elif len(self.var[var].shape)==3:
+            if isedlayer==None:
+                print('no isedlayer specified, using first layer')
+                isedlayer=0
+            return self.var['pointtime'][:Nt-1], self.var[var][:Nt-1, isedlayer, index]
 
 
     def _mdates_concise_subplot_axes(self, ax):
@@ -950,7 +973,7 @@ class XBeachModelAnalysis():
 
 
     
-    def fig_cross_var(self,var, it, iy=None, itype=None, coord=None, plot_ref_bathy=True, remove_dry_points=False, figax = None, zmin=-25, ylim=None, fmt='.-'):
+    def fig_cross_var(self,var, it, iy=None, itype=None, coord=None, plot_ref_bathy=True, remove_dry_points=False, figax = None, zmin=-25, ylim=None, fmt='.-', tight_layout=True):
         """_summary_
 
         Args:
@@ -1064,7 +1087,9 @@ class XBeachModelAnalysis():
 
         ax1.set_ylabel(var + ' [' + self.units[var] + ']', color='k')
         ax1.set_title('time: {}'.format(t))
-        plt.tight_layout()
+        if tight_layout:
+            plt.tight_layout()
+
         if self.save_fig:
             folder = os.path.join(self.model_path, 'fig', '{}_iy{}'.format(var, iy))
             if not os.path.exists(folder):

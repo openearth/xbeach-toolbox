@@ -75,9 +75,10 @@ def lateral_extend(xw,yw,z,n=5, dy=None):
     ynew2 += yw[0, 0]
     return xnew2, ynew2, znew
 
-def seaward_extend(x,y,z,slope=1/20,depth=-20):
+def seaward_extend(xw,yw,z,slope=1/20,depth=-20):
     '''
     Compute the seaward extend of the bathymery based on an artificial  slope and required offshore depth
+    Works both for grids in world coordinates (e.g. under an angle) as well as local coordinates
 
     Parameters
     ----------
@@ -102,6 +103,9 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
         bathymetry.
 
     '''
+
+    x, y, alfa = grid_world2local(xw, yw)
+
     if len(z.shape)==1:
         z = np.reshape(z,(1,len(z)))
         x = np.reshape(x,(1,len(x)))
@@ -154,4 +158,9 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
     zgr = np.concatenate((z_extend,z),1)
     ygr = np.concatenate((y_extend,y),1)
     
-    return xgr, ygr, zgr
+    xgr2, ygr2 = rotate_grid(xgr, ygr, -alfa)
+    xgr2 += xw[0, 0]
+    ygr2 += yw[0, 0]
+
+    return xgr2, ygr2, zgr
+
