@@ -103,13 +103,14 @@ def seaward_extend(xw,yw,z,slope=1/20,depth=-20):
         bathymetry.
 
     '''
+    if len(yw)==1:
+        yw = np.array(len(xw)*yw)
+    
+    xw = np.atleast_2d(xw)
+    yw = np.atleast_2d(yw)
+    z = np.atleast_2d(z)
 
-    x, y, alfa = grid_world2local(xw, yw)
-
-    if len(z.shape)==1:
-        z = np.reshape(z,(1,len(z)))
-        x = np.reshape(x,(1,len(x)))
-        y = np.reshape(y,(1,len(y)))
+    x, y, alfa = grid_world2local(np.atleast_2d(xw), np.atleast_2d(yw))
 
     ## maximum bed level at offshore boundary. 
     z0max = np.max(z[:,0])
