@@ -8,6 +8,7 @@ module contains class for analysis of 2D XBeach models
 note that output and input must be available in directory
 """
 import numpy as np
+import pandas as pd
 import os
 import netCDF4 as nc
 import matplotlib.pyplot as plt
@@ -21,7 +22,7 @@ import xbTools as xb
 import warnings
 import re
 # toolbox specific import
-from .general.geometry import rotate_grid
+from .general.geometry import rotate_grid, path_distance
 
 class XBeachModelAnalysis():
     '''
@@ -37,8 +38,7 @@ class XBeachModelAnalysis():
         """        
         self.fname = fname
         self.model_path = model_path
-        self.get_params()
-        self.get_metadata()
+
 
         # self.params = None
         self.grd = {}
@@ -58,7 +58,14 @@ class XBeachModelAnalysis():
         self.vector_vars = ['u', 'v', 'ue', 've', 'Subg', 'Svbg', 'Susg', 'Svsg',
                           'u_mean', 'v_mean', 'ue_mean', 've_mean', 'Subg_mean', 'Svbg_mean', 'Susg_mean', 'Svsg_mean',
                           'u_max', 'v_max', 'ue_max', 've_max', 'Subg_max', 'Svbg_max', 'Susg_max', 'Svsg_max',
-                          'u_min', 'v_min', 'ue_min', 've_min', 'Subg_min', 'Svbg_min', 'Susg_min', 'Svsg_min']
+                          'u_min', 'v_min', 'ue_min', 've_min', 'Subg_min', 'Svbg_min', 'Susg_min', 'Svsg_min',
+                          ]
+
+        self.get_params()
+        self.get_metadata()
+        self.load_grid()
+        self._cross_offset = 0
+        self.load_output_coordinates()
 
     def get_metadata(self):
         '''
@@ -77,6 +84,35 @@ class XBeachModelAnalysis():
                 if 'Finished reading input parameters' in line: # notice finished readline line, then break
                     break
         self.metadata = meta_dictionary # store to class
+
+        self.get_mpi_boundaries()
+
+    def get_mpi_boundaries(self):
+        '''
+        function to get mpi boundaries from XBlog.txt
+        '''
+        # first check if it is run with mpi
+        if np.sum([1 if 'computational domains on processors' in x else 0 for x in self.metadata])==0:
+            self.mpi_ix = []
+            self.mpi_iy = []           
+            return
+        else:
+            icdps = [True if 'computational domains on processors' in x else False for x in self.metadata]
+            icdp = np.argwhere(icdps)[0][0]
+            iadd = 0
+            while not ('----') in line:       
+                iadd+=1        
+                data.append([float(x) for x in self.metadata[int(iadd+icdp)].split()])
+                line = self.metadata[int(iadd+icdp+1)]
+            if data!=[]:
+                # do something with the data
+                data = np.array(data)
+                ixstop = data[:, 2]
+                iystop = data[:, 4]
+                self.mpi_ix = np.unique(ixstop)
+                self.mpi_iy = np.unique(iystop)
+            return
+
 
     def __repr__(self):
         return self.fname
@@ -144,11 +180,18 @@ class XBeachModelAnalysis():
         f = open(os.path.join(self.model_path, 'params.txt'), 'r')
         dat = f.read().split('\n')
 
+        # remove empty elements
+        dat = [x for x in dat if not(len(x)==0)]
+
+        # remove elements that are commented out with non alfanumeric character
+        dat = [x for x in dat if (x.replace(' ', '')[0].isalnum())]    
+
         # read params from params file
         params = {}
         # TODO: This get's caught up when there's an equal sign in a comment. Should check if there's a 
                 # comment sign on the line before trying to unpack values
         for d in dat:
+
             if '=' in d:
                 x1, x2 = d.split('=')
                 if x2.strip().isnumeric():
@@ -187,9 +230,17 @@ class XBeachModelAnalysis():
         if params['npointvar'] > 0:
             i0 = [i for i, var in enumerate(dat) if 'npoints' in var][0]
             points = dat[i0 + 1:i0 + int(params['npoints'] + 1)]
-            x = [float( re.split('\t| ',t)[0] ) for t in points]
-            y = [float(re.split('\t| ',t)[1] ) for t in points]
-            name = [t[2].strip() for t in points]
+
+            # get points 
+            p_spl = [ re.split('\t| ',t) for t in points]
+            # remove empty entries
+            p_spl = [[p for p in p_spli if p.split()] for p_spli in p_spl]
+            # xy
+            x = [float(p[0] ) for p in p_spl]
+            y = [float(p[1]) for p in p_spl]
+            # if names are there list of names else index
+            name = [p[2].strip() if len(p)>2 else str(ip) for ip, p in enumerate(p_spl)]
+
             params['points'] = dict(zip(name, zip(x, y)))
         else:
             params['points'] = {}
@@ -206,12 +257,15 @@ class XBeachModelAnalysis():
         if self.grd['x'].ndim==1:
             self.grd['x']= self.grd['x'][np.newaxis, ...] 
 
-        assert self.grd['x'].shape == (self.params['ny']+1, self.params['nx']+1), 'x grid not of correct size'
+        if (self.grd['x'].shape != (self.params['ny']+1, self.params['nx']+1)):
+            print('warning: x grid not of size specified in params.txt')
 
         self.grd['z'] = np.loadtxt(os.path.join(self.model_path, self.params['depfile']))
         if self.grd['z'].ndim==1:
             self.grd['z']= self.grd['z'][np.newaxis, ...] 
-        assert self.grd['z'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'z grid not of correct size'
+        if (self.grd['z'].shape != (self.params['ny'] + 1, self.params['nx'] + 1)):
+            print('warning: z grid not of size specified in params.txt')
+
         ## set posdwn
         if 'posdwn' in self.params:
             if int(self.params['posdwn']) == 1:
@@ -220,11 +274,13 @@ class XBeachModelAnalysis():
         # read y
         if self.params['ny'] > 0:
             self.grd['y'] = np.loadtxt(os.path.join(self.model_path, self.params['yfile']))
-            assert self.grd['y'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'y grid not of correct size'
+            if (self.grd['y'].shape != (self.params['ny'] + 1, self.params['nx'] + 1)):
+                print('warning: y grid not of size specified in params.txt')
         # struct
         if ('struct' in self.params) == 1:
-            self.grd['ne'] = np.loadtxt(os.path.join(self.model_path, self.params['ne_layer']))
-            assert self.grd['ne'].shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'ne grid not of correct size'
+            if self.params['struct']==1:
+                self.grd['ne'] = np.loadtxt(os.path.join(self.model_path, self.params['ne_layer']))
+                assert np.atleast_2d(self.grd['ne']).shape == (self.params['ny'] + 1, self.params['nx'] + 1), 'ne grid not of correct size'
 
     def get_waves(self):
         """_summary_
@@ -239,6 +295,7 @@ class XBeachModelAnalysis():
             self.waves_boundary['mainang'] = dat[:, 2]
             self.waves_boundary['gammajsp'] = dat[:, 3]
             self.waves_boundary['s'] = dat[:, 4]
+
             if self.globalstarttime is None:
                 self.waves_boundary['time'] = np.cumsum(dat[:, 5])
             else:
@@ -254,9 +311,23 @@ class XBeachModelAnalysis():
             self.waves_boundary['Tp'] = float(self.params['Trep'])
             self.waves_boundary['mainang'] = float( self.params['dir0'])
             self.waves_boundary['s'] = float(self.params['m']/2)
+
+        elif self.params['wbctype'] == 'ts_nonh':
+            dat = pd.read_csv(os.path.join(self.model_path, 'boun_U.bcf'), skiprows=2, header=0, sep=' ')
+            for key in dat.keys():
+                if key=='t':
+                    if self.globalstarttime is None:
+                        self.waves_boundary['time'] = dat['t'].values
+                    else:
+                        globtime = np.array([np.timedelta64(int(1e6*x), 'us') for x in dat['t'].values]) + self.globalstarttime
+                        self.waves_boundary['time'] = globtime
+                else:
+                    self.waves_boundary[key] = dat[key].values
         else:
             print('not possible')
             pass
+
+        return self.waves_boundary
 
     def get_vegetation(self):
         """_summary_
@@ -282,6 +353,20 @@ class XBeachModelAnalysis():
             self.tide['tideloc'] = self.params['tideloc']
             if 'paulrevere' in self.params:
                 self.tide['paulrevere'] = self.params['paulrevere']
+
+            if self.globalstarttime is None:
+                self.tide['time'] = dat[:, 0]
+            else:
+                loctime = dat[:, 0]
+                globtime = np.array([np.timedelta64(int(x), 's') for x in loctime]) + self.globalstarttime
+                self.tide['time'] = globtime
+
+            return self.tide
+        
+        else:
+            print('no timevarying boundary file imposed')
+            return self.params['zs0']
+        
 
     def get_wind(self):
         """_summary_
@@ -332,7 +417,7 @@ class XBeachModelAnalysis():
         if self.globalstarttime is None:
             self.var['globaltime'] = ds.variables['globaltime'][:]
         else:
-            self.var['globaltime'] = np.array([np.timedelta64(int(x), 's') for x in ds.variables['globaltime'][:].data]) \
+            self.var['globaltime'] = np.array([np.timedelta64(int(1e3*x), 'ms') for x in ds.variables['globaltime'][:].data]) \
                                       + self.globalstarttime
         # mean variable time
         if self.params['nmeanvar'] > 0:
@@ -341,9 +426,12 @@ class XBeachModelAnalysis():
             else:
                 data = ds.variables['meantime'][:]
                 data = data[data.mask == False]
-                self.var['meantime'] = np.array(
-                    [np.timedelta64(int(x), 's') for x in data.data.flatten()]) \
-                                         + self.globalstarttime
+                if len(data)>0:
+                    self.var['meantime'] = np.array(
+                        [np.timedelta64(int(1e3*x), 'ms') for x in data.data.flatten()]) \
+                                            + self.globalstarttime
+                else:
+                    self.var['meantime'] = []
         # point variable time
         if self.params['npointvar'] > 0:
             if self.globalstarttime is None:
@@ -352,7 +440,7 @@ class XBeachModelAnalysis():
                 data = ds.variables['pointtime'][:]
                 data = data[data.mask == False]
                 self.var['pointtime'] = np.array(
-                    [np.timedelta64(int(x), 's') for x in data.data.flatten()]) \
+                    [np.timedelta64(int(1e6*x), 'us') for x in data.data.flatten()]) \
                                          + self.globalstarttime
 
             station_list = []
@@ -369,31 +457,9 @@ class XBeachModelAnalysis():
             self.var['station_x'] = ds.variables['pointx'][:]
             self.var['station_y'] = ds.variables['pointy'][:]
 
-        def path_distance(polx, poly):
-            '''
-            computes the distance along a polyline
-            ----------
-            polx : TYPE array
-                X COORDINATES.
-            poly : TYPE array
-                Y COORDINATES.
+        cross = path_distance(x[0, :], y[0, :])
+        self.var['cross'] = cross + self._cross_offset
 
-            Returns: TYPE array
-                PATHDISTANCE
-            -------
-            python alternative to matlab function.
-
-            '''
-            dx = np.diff(polx)
-            dy = np.diff(poly)
-
-            dr = np.sqrt(dx ** 2 + dy ** 2)
-
-            pathdistance = np.insert(np.cumsum(dr), 0, 0, axis=0)
-
-            return pathdistance
-
-        self.var['cross'] = path_distance(x[0, :], y[0, :])
         self.var['along'] = path_distance(x[:, 0], y[:, 0])
 
         # self.var['localy'], self.var['localx'] = np.meshgrid(self.var['cross'], self.var['along'])
@@ -417,6 +483,13 @@ class XBeachModelAnalysis():
 
         return
 
+    def add_cross_offset(self, offset):
+        """
+        adds an offset value to the computed cross-shore local coordinate system (such that it does not start at zero at offshore boundary)
+        """
+        self._cross_offset = offset
+        self.load_output_coordinates()
+
     def load_modeloutput(self, var):
         """_summary_
 
@@ -428,20 +501,17 @@ class XBeachModelAnalysis():
             return
 
         if '_mean' in var:
-            assert sum([var[:-5] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
-        elif '_var' in var:
-            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
-        elif '_min' in var:
-            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
-        elif '_max' in var:
-            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'
+            assert sum([var[:-5] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'.format(var)
+        elif any(substr in var for substr in ['min', '_max', '_var']):
+            assert sum([var[:-4] in x for x in self.params['meanvar']]) > 0, '{} not in xb output'.format(var)
         elif 'point_' in var:
-            assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'
+            assert sum([var[6:] in x for x in self.params['pointvar']]) > 0, '{} not in xb output'.format(var)
         else:
-            # Check if the variable is one of the outputted global variables from the model
-            if var not in self.params['globalvar']:
-                raise IndexError("Variable is not an available globalvar output." + 
-                                 " The available outputs are {}".format(self.params["globalvar"]))
+
+        # Check if the variable is one of the outputted global variables from the model
+        if var not in self.params['globalvar']:
+            raise IndexError("Variable is not an available globalvar output." + 
+                             " The available outputs are {}".format(self.params["globalvar"]))
 
         # if not yet present, load coordinates
         if self.var == {}:
@@ -452,11 +522,16 @@ class XBeachModelAnalysis():
         print('loading variable {} from file'.format(var))
         dat = ds.variables[var][:]
 
-        #mean and point output might not be availble if the eor is not reached. Therefore cut
+        #mean and point output might not be available if the eor is not reached. Therefore cut
         if 'point_' in var and len(np.atleast_1d(dat.mask)) > 1:
-            dat = dat[~dat.mask[:, 0], :]
-        elif dat.ndim == 3 and '_mean' in var and len(np.atleast_1d(dat.mask)) > 1:
+            if len(dat.shape)==2:
+                dat = dat[~dat.mask[:, 0], :]
+            elif len(dat.shape)==3:
+                dat = dat[~dat.mask[:, 0, 0], 0, :]
+        elif dat.ndim == 3 and any(substr in var for substr in ['_mean', '_min', '_max', '_var']) and len(np.atleast_1d(dat.mask)) > 1:
             dat = dat[~dat.mask[:, 0, 0], :, :]
+        elif dat.ndim == 4 and any(substr in var for substr in ['_mean', '_min', '_max', '_var']) and len(np.atleast_1d(dat.mask)) > 1:
+            dat = dat[~dat.mask[:, 0, 0, 0], :, :, :]
         elif dat.ndim == 2 and '_mean' in var and len(np.atleast_1d(dat.mask)) > 1:
             # 1D case
             pass
@@ -482,7 +557,7 @@ class XBeachModelAnalysis():
         #read long name and units from netcdf
         self.long_name[var] = ds.variables[var].long_name
         self.units[var] = ds.variables[var].units
-
+        
     def get_modeloutput(self, var):
         """_summary_
 
@@ -495,7 +570,7 @@ class XBeachModelAnalysis():
         self.load_modeloutput(var)
         return self.var[var]
 
-    def get_modeloutput_by_station(self, var, station):
+    def get_modeloutput_by_station(self, var, station, isedlayer=None):
         """_summary_
 
         Args:
@@ -519,7 +594,13 @@ class XBeachModelAnalysis():
         lentvar = len(self.var[var][:, 0])
         Nt = np.min([lent, lentvar])
 
-        return self.var['pointtime'][:Nt-1], self.var[var][:Nt-1, index]
+        if len(self.var[var].shape)==2:
+            return self.var['pointtime'][:Nt-1], self.var[var][:Nt-1, index]
+        elif len(self.var[var].shape)==3:
+            if isedlayer==None:
+                print('no isedlayer specified, using first layer')
+                isedlayer=0
+            return self.var['pointtime'][:Nt-1], self.var[var][:Nt-1, isedlayer, index]
 
     def _mdates_concise_subplot_axes(self, ax):
         """_summary_
@@ -556,12 +637,10 @@ class XBeachModelAnalysis():
         zs0_tide = self.tide['zs0']
         if self.globalstarttime is None:
             t_tide = self.tide['time'] / 3600
-            t = self.var['globaltime'] / 3600
+            t = self.var['meantime'] / 3600
         else:
-            t_tide = np.array(
-                [np.timedelta64(int(x), 's') for x in self.tide['time']]) \
-                     + self.globalstarttime
-            t = self.var['globaltime']
+            t_tide = self.tide['time']
+            t = self.var['meantime']
 
         lent = min([len(zs), len(t)])
         tideloc = self.params['tideloc']
@@ -667,7 +746,7 @@ class XBeachModelAnalysis():
 
         return fig, ax
 
-    def fig_map_var(self, var,  label=None, it=np.inf, time_unit = "sec", figsize=None, figax=None, **kwargs):
+    def fig_map_var(self, var, label=None, it=np.inf, figsize=None, figax=None, japlot_mpi_boundaries = False, **kwargs):
         """_summary_
 
         Args:
@@ -728,8 +807,14 @@ class XBeachModelAnalysis():
 
         fig, ax = self._fig_map_var(data, label, figsize, figax=figax, **kwargs)
         
-        print(time_unit)
-        # time_unit = "sec"
+        time_unit = "sec"
+
+        if japlot_mpi_boundaries:
+            for iy in self.mpi_iy:
+                ax.plot(self.grd['x'][int(iy)-1, :], self.grd['y'][int(iy)-1, :], 'k', linewidth=0.5)
+            for ix in self.mpi_ix:
+                ax.plot(self.grd['x'][:,int(ix)-1], self.grd['y'][:,int(ix)-1], 'k', linewidth=0.5)     
+
         if self.globalstarttime is None:
             ax.set_title('{:.1f} {}'.format(self.var['globaltime'][it], time_unit))
         else:
@@ -892,7 +977,7 @@ class XBeachModelAnalysis():
             plt.savefig(os.path.join(self.model_path, 'fig', 'difmap_{}_it_{}-{}.png'.format(var, itend, it0)), dpi=200)
         return fig, ax
 
-    def fig_cross_var(self,var, it, iy=None, itype=None, coord=None, plot_ref_bathy=True, figax = None, zmin=-25, ylim=None, fmt='.-'):
+    def fig_cross_var(self,var, it, iy=None, itype=None, coord=None, plot_ref_bathy=True, remove_dry_points=False, figax = None, zmin=-25, ylim=None, fmt='.-', tight_layout=True):
         """_summary_
 
         Args:
@@ -916,7 +1001,7 @@ class XBeachModelAnalysis():
 
         x = self.var['globalx']
         y = self.var['globaly']
-        if '_mean' in var:
+        if any(substr in var for substr in ['_mean', '_min', '_max', '_var']):
             t = self.var['meantime'][it]
         else:
             t = self.var['globaltime'][it]
@@ -956,6 +1041,24 @@ class XBeachModelAnalysis():
                 data = np.where(~dat1.mask, data_along, np.nan).flatten()  # make 0d again after rotation operation       
             
         cross = self.var['cross']     
+
+        if remove_dry_points:
+            if any(substr in var for substr in ['_mean', '_min', '_max', '_var']):
+                try:
+                    self.load_modeloutput('zs_min')
+                    self.load_modeloutput('zb_mean')
+                    data = np.where((self.var['zs_min'][it, iy, :]-self.var['zb_mean'][it, iy, :]).flatten()>=0.01, data, np.nan)
+                except:
+                    print('zs_min or zb_mean not saved on file, so no dry points are removed from the plot')
+            else:
+                try:
+                    self.load_modeloutput('zs')
+                    self.load_modeloutput('zb')
+                    data = np.where((self.var['zs'][it, iy, :]-self.var['zb'][it, iy, :]).flatten()>=0.01, data, np.nan)    
+                except:
+                    print('zs or zb not saved on file, so no dry points are removed from the plot')            
+                                
+            
 
         if figax is None:
             fig, ax1 = plt.subplots(figsize=[5, 3])
@@ -998,7 +1101,9 @@ class XBeachModelAnalysis():
 
         ax1.set_ylabel(var + ' [' + self.units[var] + ']', color='k')
         ax1.set_title('time: {}'.format(t))
-        plt.tight_layout()
+        if tight_layout:
+            plt.tight_layout()
+
         if self.save_fig:
             folder = os.path.join(self.model_path, 'fig', '{}_iy{}'.format(var, iy))
             if not os.path.exists(folder):
@@ -1161,4 +1266,109 @@ class XBeachModelAnalysis():
 
         if ja_plot_localcoords is False:
             self.set_plot_localcoords(False)
+        return fig, ax
+    
+    def fig_map_contour_var(self, var, levels, label=None, it=np.inf, figax=None, figsize=None, **kwargs):
+        """
+        Generates a contour plot of a specified variable at a given time step.
+
+        Parameters:
+        - var: str
+            The variable name to plot.
+        - levels: array-like
+            The levels at which to draw the contour lines.
+        - label: str, optional
+            The label for the color bar and plot title. Defaults to the variable name.
+        - it: int, optional
+            The time index for the plot. Defaults to the last time step if np.inf.
+        - figax: tuple, optional
+            A tuple containing the figure and axis objects. If None, a new figure and axis are created.
+        - figsize: tuple, optional
+            The size of the figure. Used only if figax is None.
+        - kwargs: dict, optional
+            Additional keyword arguments passed to plt.contour.
+
+        Returns:
+        - fig: matplotlib.figure.Figure
+            The figure object containing the plot.
+        - ax: matplotlib.axes.Axes
+            The axis object containing the plot.
+        """
+
+        # Define a nested class for formatting contour levels
+        # This class is used to format contour level labels, ensuring that trailing zeros are removed 
+        # from the string representation of the level if present.
+        class nf(float):
+            def __repr__(self):
+                s = f'{self:.1f}'
+                return f'{self:.0f}' if s[-1] == '0' else s
+
+        # Load the model output data for the specified variable
+        self.load_modeloutput(var)
+
+        # Set the time index to the last time step if not specified
+        if np.isinf(it):
+            it = len(self.var['globaltime']) - 1
+        assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
+
+        # Extract the data for the specified variable and time step
+        data = self.var[var][it, :, :]
+        if label is None:
+            label = str(var)
+
+        # Select coordinate system
+        if self.plot_localcoords:
+            x = self.var['localx']
+            y = self.var['localy']
+        else:
+            x = self.var['globalx']
+            y = self.var['globaly']
+
+        # Create a new figure and axis if not provided
+        if figax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        else:
+            fig, ax = figax
+
+        # Plot the contour
+        CS = ax.contour(x, y, data, levels=levels, **kwargs)
+        
+        # Format the contour levels
+        CS.levels = [nf(val) for val in CS.levels]
+        ax.clabel(CS, CS.levels, inline=True, fontsize=10)
+
+        # Set axis labels based on coordinate system
+        if self.plot_localcoords:
+            if self.plot_km_coords:
+                ax.set_xlabel('along shore [km]')
+                ax.set_ylabel('cross shore [km]')
+            else:
+                ax.set_xlabel('along shore [m]')
+                ax.set_ylabel('cross shore [m]')
+        else:
+            if self.plot_km_coords:
+                ax.set_xlabel('x [km]')
+                ax.set_ylabel('y [km]')
+            else:
+                ax.set_xlabel('x [m]')
+                ax.set_ylabel('y [m]')
+
+        ax.set_aspect('equal')
+        fig.tight_layout()
+
+        # Set the plot title
+        if self.globalstarttime is None:
+            ax.set_title(f'{var} - t = {self.var["globaltime"][it]:.1f} Hr')
+        else:
+            ax.set_title(f'{var} - t = {self.var["globaltime"][it]}')
+
+        # Save the figure if required
+        if self.save_fig:
+            folder = os.path.join(self.model_path, 'fig', f'map_{var[0]}')
+            if not os.path.exists(folder):
+                os.mkdir(folder)
+            plt.savefig(os.path.join(folder, f'map_{var}_it_{it}.png'), dpi=200)
+
+        fig.tight_layout()
+
         return fig, ax

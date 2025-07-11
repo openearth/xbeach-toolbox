@@ -199,6 +199,31 @@
         "dryslp",
         "fixedavaltime"
     ],
+
+    "Hotstart": [
+        "writehotstart",
+        "hotstart",
+        "hotstartfileno",
+        "tinth",
+    ],
+    "Output": [
+        "outputformat",
+        "tintg",
+        "tintm",
+        "tstart",
+        "tintp",
+        "tintc",
+        "nrugdepth",
+        "outputprecision",
+        "timings"
+    ],
+  
+    "_Output": [
+        "nglobalvar",
+        "nmeanvar",
+        "npointvar",
+        "npoints"
+    
     "par":[
         "This will store parameters that are missing from all the other sections"
     ]

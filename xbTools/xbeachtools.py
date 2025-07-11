@@ -60,12 +60,22 @@ class XBeachModelSetup():
         Args:
             input_par_dict (dict): dict of input param flags and the associated values
         """        
+
         ## set wavemodel. Default is Surfbeat
-        if 'wavemodel' not in input_par_dict:
-            print('No wavemodel defined. Wavemodel is set to Surfbeat')
-            self.wavemodel = 'surfbeat'
+        if '_General' not in self.input_par:
+            # then this is the first time set params on this class:
+            if ('wavemodel' not in input_par_dict):
+                print('No wavemodel defined. Wavemodel is set to Surfbeat')
+                self.wavemodel = 'surfbeat'
+            else:
+                self.wavemodel = input_par_dict['wavemodel']
         else:
-            self.wavemodel = input_par_dict['wavemodel']
+            if 'wavemodel' in input_par_dict:
+                print('Mind you: Wave model overwritten to {}'.format(input_par_dict['wavemodel']))
+                self.wavemodel = input_par_dict['wavemodel']
+            else: 
+                pass
+
         
         ## set wbctype
         if 'wbctype' in input_par_dict:
@@ -78,14 +88,9 @@ class XBeachModelSetup():
         # Add store it in the class
         self.json_param_dict = get_json(folder_path, file_name = json_file_name)
 
-        ## create input dict
-        self.input_par = {}
-
-        # Init 'par' key as a nested dict
-        self.input_par['par'] = {}
-
-        # Init flag to track if parameters aren't found in the JSON
-        not_found_params = False
+        ## load parameters and categories
+        f           = open(os.path.join(os.path.dirname(__file__), 'par.json'),'r')
+        par_dict    = json.loads(f.read())
 
         ## loop over input parameters 
         for input_par in input_par_dict:
@@ -602,13 +607,17 @@ class XBeachModelSetup():
                 # Get number of entries under the first key
                 num_vals = len(self.waves_boundary['Hm0'])
                 
-                # Loop over each row of the table...
-                for i in range(num_vals):
-                    # Write the param vals into each column
-                    for param in self.required_wbc_params:
-                        f.write('{} '.format(self.waves_boundary[param][i]))
-                    
-                    # Set up the next row
+        elif self.wbctype=='jonstable':
+            if 'Wave boundary condition parameters' in self.input_par:
+                self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonstable.txt'
+            else:
+               self.input_par['Wave boundary condition parameters'] = {}
+               self.input_par['Wave boundary condition parameters']['bcfile'] = 'jonstable.txt'                
+            required_par = ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc']
+            with open(os.path.join(path,'jonstable.txt'),'w') as f:
+                for ii in range(len(self.waves_boundary['Hm0'])):
+                    for par in required_par:
+                        f.write('{:.2f} '.format(self.waves_boundary[par][ii]))
                     f.write('\n')
     
     def _write_wbc_file(self, path, num_dec_dig):
@@ -779,8 +788,6 @@ class XBeachModelSetup():
 
         ## Open and create the file
         with open(path_params,'w') as f:
-            
-            # TODO: Move these functions into a util file to make this class smaller
 
             # Write the metadata at the top of the file
             self._write_params_metadata(f, current_date, user)
@@ -875,18 +882,35 @@ class XBeachModelSetup():
         None.
 
         '''
+        if self.zs0type == 'list':
+            nsubplots = 4
+        else:
+            nsubplots = 3
         if self.wbctype=='jonstable':
             plt.figure()
-            plt.subplot(3,1,1)
+            plt.subplot(nsubplots,1,1)
             plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['Hm0'],'-o')
-            plt.ylabel('$H_{m0}$')
-            plt.subplot(3,1,2)
+            plt.ylabel('$H_{m0}$ [m]')
+            plt.subplot(nsubplots,1,2)
             plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['Tp'],'-o')
-            plt.ylabel('$T_{p}$')
-            plt.subplot(3,1,3)
+            plt.ylabel('$T_{p}$ [s]')
+            plt.subplot(nsubplots,1,3)
             plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['mainang'],'-o')
-            plt.ylabel('$D$')
-            plt.xlabel('Time')
+            plt.ylabel('$D$ [deg N]')
+            
+            if self.zs0type == 'list':
+                plt.subplot(nsubplots, 1, 4)
+                for icorner in range(self.zs0.shape[1]-1):
+                    plt.plot(self.zs0[:, 0], self.zs0[:,icorner+1],'-o')
+                plt.ylabel('zs [m]')
+                plt.xlabel('Time')    
+
+            else:
+                # plot xlabel on last subplot
+                plt.xlabel('Time')        
+            
+            plt.tight_layout()
+
             if save_path!=None:
                 plt.savefig(os.path.join(save_path,'jonstable.png'))
         elif self.wbctype=='parametric':

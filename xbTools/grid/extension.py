@@ -2,17 +2,19 @@
 """
 Created on Fri Aug 11 14:10:02 2023
 
-@author: Menno de Ridder, Cas van Bemmelen
+@author: Menno de Ridder, Cas van Bemmelen, Marlies van der Lugt
 collection that allows for the extension of basic XBeach grids
 module contains:
     - lateral_extend
     - seaward_extend
 """
 import numpy as np
+from ..general.geometry import grid_world2local, rotate_grid
 
-def lateral_extend(x,y,z,n=5):
+def lateral_extend(xw,yw,z,n=5, dy=None):
     '''
     Extend the model domain at both lateral sides with n number of cells
+    Works both for grids in world coordinates (e.g. under an angle) as well as local coordinates
 
     Parameters
     ----------
@@ -40,8 +42,14 @@ def lateral_extend(x,y,z,n=5):
     #assert z.ndim<2,'z must be a matrix'
     #assert z.shape==x.shape==y.shape,'shape of input matrix is not the same'
     
-    dy1 = y[1,0]-y[0,0]
-    dy2 = y[-1,0]-y[-2,0]
+    x, y, alfa = grid_world2local(xw, yw)
+
+    if y.shape[0]>2:
+        dy1 = y[1,0]-y[0,0]
+        dy2 = y[-1,0]-y[-2,0]
+    else:
+        assert not(dy==None), 'specify a dy to extend a 1D grid to 2D'
+        dy1 = dy2 = dy
     
     xnew = np.zeros((x.shape[0]+n*2, x.shape[1]))
     ynew = np.zeros((y.shape[0]+n*2, y.shape[1]))
@@ -61,11 +69,16 @@ def lateral_extend(x,y,z,n=5):
         ## update y
         ynew[i,:]       = y[0,:]-dy1*n+dy1*i
         ynew[-(i+1),:]  = y[-1,:]+dy2*n-dy2*i
-    return xnew, ynew, znew
 
-def seaward_extend(x,y,z,slope=1/20,depth=-20):
+    xnew2, ynew2 = rotate_grid(xnew, ynew, -alfa)
+    xnew2 += xw[0, 0]
+    ynew2 += yw[0, 0]
+    return xnew2, ynew2, znew
+
+def seaward_extend(xw,yw,z,slope=1/20,depth=-20):
     '''
     Compute the seaward extend of the bathymery based on an artificial  slope and required offshore depth
+    Works both for grids in world coordinates (e.g. under an angle) as well as local coordinates
 
     Parameters
     ----------
@@ -90,6 +103,9 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
         bathymetry.
 
     '''
+
+    x, y, alfa = grid_world2local(xw, yw)
+
     if len(z.shape)==1:
         z = np.reshape(z,(1,len(z)))
         x = np.reshape(x,(1,len(x)))
@@ -142,4 +158,9 @@ def seaward_extend(x,y,z,slope=1/20,depth=-20):
     zgr = np.concatenate((z_extend,z),1)
     ygr = np.concatenate((y_extend,y),1)
     
-    return xgr, ygr, zgr
+    xgr2, ygr2 = rotate_grid(xgr, ygr, -alfa)
+    xgr2 += xw[0, 0]
+    ygr2 += yw[0, 0]
+
+    return xgr2, ygr2, zgr
+
