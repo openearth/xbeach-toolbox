@@ -5,3 +5,5 @@
 /.idea
 /examples/xb-2D/
 
+# Don't track pyc files
+*.pyc

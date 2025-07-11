@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 def dispersion(w, d, max_error=0.00001,g=9.81):
     '''
-    Computes the wave number given a radial frequeny and water depth
+    Computes the wave number given a radial frequency and water depth
 
     Parameters
     ----------
