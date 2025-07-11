@@ -71,7 +71,7 @@ class XBeachModelAnalysis():
         '''
         function to print metadata from XBlog.txt
         '''
-        with open(self.model_path+'\\XBlog.txt') as file:
+        with open(os.path.join(self.model_path, 'XBlog.txt')) as file:
         # setup meta dictionary
             meta_dictionary = {}
             # loop over all lines in file
