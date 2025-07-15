@@ -1,232 +1,453 @@
 {
+    "Use of default sets": [
+        "useXBeachGSettings"
+    ],
     "Physical processes": [
         "wavemodel",
-        "sedtrans",
-        "morphology",
-        "vegetation",
-        "spongelength",
-        "ships",
-        "wind",
-        "viscosity",
-        "swrunup",
+        "wavemodel_str",
+        "cyclic",
         "swave",
         "lwave",
+        "flow",
+        "sedtrans",
+        "morphology",
+        "avalanching",
+        "nonh",
+        "gwflow",
+        "q3d",
+        "swrunup",
+        "ships",
+        "vegetation",
         "snells",
         "single_dir",
         "setbathy",
-        "gwflow",
-        "avalanching",
-        "cyclic"
+        "viscosity",
+        "advection",
+        "wind",
+        "rainfall",
+        "refraction"
     ],
     "Grid parameters": [
+        "depfile",
+        "posdwn",
+        "nx",
+        "ny",
+        "nz",
+        "alfa",
+        "vardx",
+        "dx",
+        "dy",
+        "xfile",
+        "yfile",
+        "xori",
+        "yori",
         "thetamin",
         "thetamax",
         "dtheta",
         "dtheta_s",
         "thetanaut",
-        "posdwn"
+        "gridform",
+        "xyfile",
+        "gridform_str"
     ],
     "Model time": [
+        "tstop",
         "CFL",
         "dtset",
-        "tstop",
-        "maxdtfac"
+        "defuse",
+        "maxdtfac",
+        "tunits"
     ],
     "Physical constants": [
-        "rho",
         "g",
+        "rho",
         "depthscale"
     ],
     "Initial conditions": [
+        "zs0",
         "zsinitfile",
-        "hotstartflow"
+        "hotstartflow",
+        "hotstart",
+        "hotstartfileno"
     ],
     "Wave boundary condition parameters": [
-        "Hrms",
-        "Tlong",
-        "Trep",
-        "dir0",
+        "wbctype",
+        "wbctype_str",
         "instat",
-        "lateralwave",
-        "m",
+        "instat_str",
         "taper",
+        "Hrms",
         "Tm01",
-        "wbctype"
+        "Trep",
+        "Tlong",
+        "dir0",
+        "nmax",
+        "m",
+        "lateralwave",
+        "lateralwave_str",
+        "leftwave",
+        "leftwave_str",
+        "rightwave",
+        "rightwave_str",
+        "bclwonly",
+        "Sfold"
+    ],
+    "Wave-spectrum boundary condition parameters": [
+        "bcfile",
+        "random",
+        "fcutoff",
+        "nspr",
+        "trepfac",
+        "sprdthr",
+        "correctHm0",
+        "Tm01switch",
+        "rt",
+        "dtbc",
+        "dthetaS_XB",
+        "nspectrumloc",
+        "wbcversion",
+        "nonhspectrum",
+        "cyclicdiradjust",
+        "wbcEvarreduce",
+        "wbcQvarreduce",
+        "wbcScaleEnergy",
+        "wbcRemoveStokes"
     ],
     "Flow boundary condition parameters": [
         "front",
-        "back",
+        "front_str",
         "left",
+        "left_str",
         "right",
+        "right_str",
+        "back",
+        "back_str",
         "ARC",
         "order",
         "highcomp",
         "freewave",
         "epsi",
-        "tidetype"
+        "nc",
+        "tidetype",
+        "tidetype_str"
     ],
     "Tide boundary conditions": [
-        "zs0",
         "zs0file",
         "tideloc",
-        "paulrevere"
+        "paulrevere",
+        "paulrevere_str"
     ],
-    "Discharge boundary conditions": [
-        "disch_loc_file",
-        "disch_timeseries_file",
+    "Flow discharge boundary conditions": [
         "ndischarge",
         "ntdischarge",
-        "beta"
+        "disch_loc_file",
+        "disch_timeseries_file"
+    ],
+    "Wave breaking parameters": [
+        "break",
+        "break_str",
+        "gamma",
+        "gamma2",
+        "alpha",
+        "n",
+        "gammax",
+        "rollergammax",
+        "delta",
+        "deltahmin",
+        "wavfriccoef",
+        "wavfricfile",
+        "fwcutoff",
+        "breakerdelay",
+        "shoaldelay",
+        "facsd",
+        "facrun"
+    ],
+    "Roller parameters": [
+        "roller",
+        "beta",
+        "varbeta",
+        "rfb"
+    ],
+    "Wave-current interaction parameters": [
+        "wci",
+        "hwci",
+        "hwcimax",
+        "cats"
     ],
     "Flow parameters": [
         "bedfriction",
-        "bedfricfile",
+        "bedfriction_str",
         "bedfriccoef",
+        "bedfricfile",
+        "dynamrough",
+        "dstem",
+        "droot",
         "maxcf",
         "mincf",
         "nuh",
         "nuhfac",
-        "smag"
+        "nuhv",
+        "smag",
+        "friction_infiltration",
+        "friction_turbulence",
+        "friction_acceleration",
+        "friction_acceleration_str",
+        "gamma_turb"
     ],
     "Coriolis force parameters": [
         "wearth",
         "lat"
     ],
+    "Wind parameters": [
+        "rhoa",
+        "Cd",
+        "windv",
+        "windth",
+        "windfile"
+    ],
+    "Rain parameters": [
+        "rainfallrate",
+        "rainfallratefile",
+        "nrainfallrate"
+    ],
+    "Groundwater parameters": [
+        "kx",
+        "ky",
+        "kz",
+        "dwetlayer",
+        "aquiferbot",
+        "aquiferbotfile",
+        "gw0",
+        "gw0file",
+        "gwnonh",
+        "gwfastsolve",
+        "gwscheme",
+        "gwscheme_str",
+        "gwReturb",
+        "gwheadmodel",
+        "gwheadmodel_str",
+        "gwhorinfil"
+    ],
+    "Q3D sediment transport parameters": [
+        "vonkar",
+        "vicmol",
+        "kmax",
+        "sigfac",
+        "deltar",
+        "rwave"
+    ],
     "Non-hydrostatic correction parameters": [
         "solver",
+        "solver_str",
         "solver_maxit",
         "solver_acc",
         "solver_urelax",
         "kdmin",
-        "Topt",
-        "nonhq3d",
-        "nhbreaker",
-        "nhlay",
         "dispc",
+        "Topt",
+        "nhbreaker",
         "breakviscfac",
         "maxbrsteep",
-        "reformsteep"
+        "secbrsteep",
+        "reformsteep",
+        "breakvisclen",
+        "nonhq3d",
+        "nhlay"
     ],
     "Bed composition parameters": [
+        "rhos",
         "ngd",
         "nd",
+        "dzg1",
+        "dzg2",
+        "dzg3",
+        "por",
+        "D15",
         "D50",
-        "D90"
+        "D90",
+        "ws",
+        "sedcal",
+        "ucrcal"
     ],
-    "Output": [
-        "outputformat",
-        "tintg",
-        "tintm",
+    "Sediment transport parameters": [
+        "waveform",
+        "waveform_str",
+        "form",
+        "form_str",
+        "sws",
+        "lws",
+        "BRfac",
+        "facsl",
+        "z0",
+        "smax",
+        "tsfac",
+        "facua",
+        "facSk",
+        "facAs",
+        "turbadv",
+        "turbadv_str",
+        "turb",
+        "turb_str",
+        "Tbfac",
+        "Tsmin",
+        "lwt",
+        "betad",
+        "swtable",
+        "sus",
+        "bed",
+        "bulk",
+        "facDc",
+        "jetfac",
+        "fallvelred",
+        "dilatancy",
+        "rheeA",
+        "pormax",
+        "reposeangle",
+        "bdslpeffmag",
+        "bdslpeffini",
+        "bdslpeffdir",
+        "bdslpeffdirfac",
+        "ci",
+        "phit",
+        "incldzdx",
+        "inclrelweight",
+        "streaming",
+        "uprushfac",
+        "backwashfac",
+        "yturb",
+        "facthr",
+        "sedfricfac",
+        "sedfricfac_str",
+        "Arms",
+        "Ctrans",
+        "slopecorr",
+        "slopecorr_str",
+        "fsed",
+        "phaselag",
+        "thetcr",
+        "bermslopetransport",
+        "bermslopebed",
+        "bermslopesus",
+        "bermslope",
+        "bermslopefac",
+        "bermslopegamma",
+        "bermslopedepth",
+        "alfaD50"
+    ],
+    "Morphology parameters": [
+        "morfac",
+        "morfacopt",
+        "morstart",
+        "morstop",
+        "wetslp",
+        "dryslp",
+        "lsgrad",
+        "hswitch",
+        "dzmax",
+        "fixedavaltime",
+        "avaltime",
+        "nTrepavaltime",
+        "struct",
+        "ne_layer"
+    ],
+    "Output variables": [
+        "timings",
         "tstart",
+        "tint",
+        "tintg",
         "tintp",
         "tintc",
+        "tintm",
+        "tinth",
+        "tsglobal",
+        "tspoints",
+        "tsmean",
+        "tshotstart",
+        "writehotstart",
+        "globalvars",
+        "meanvars",
+        "pointvars",
+        "nrugauge",
         "nrugdepth",
+        "rugdepth",
+        "outputformat",
+        "outputformat_str",
+        "ncfilename",
         "outputprecision",
-        "timings"
+        "outputprecision_str",
+        "stationid"
     ],
-    "_Output": [
-        "nglobalvar",
-        "nmeanvar",
-        "npointvar",
-        "npoints"
+    "Output projection": [
+        "projection",
+        "rotate",
+        "remdryoutput"
+    ],
+    "Drifters parameters": [
+        "ndrifter",
+        "drifterfile"
+    ],
+    "Ship parameters": [
+        "shipfile",
+        "nship"
+    ],
+    "Vegetation parameters": [
+        "veggiefile",
+        "veggiemapfile",
+        "nveg",
+        "vegnonlin",
+        "vegcanflo",
+        "veguntow",
+        "porcanflow",
+        "Kp",
+        "Cm"
+    ],
+    "Wave numerics parameters": [
+        "scheme",
+        "scheme_str",
+        "truncationtype",
+        "truncationtype_str",
+        "wavint",
+        "maxerror",
+        "maxerror_angle",
+        "maxiter",
+        "swkhmin",
+        "oldhmin",
+        "oldRD1D"
     ],
     "Flow numerics parameters": [
         "eps",
-        "eps_sd"
-    ],
-    "Wave-spectrum boundary condition parameters": [
-        "rt",
-        "Tm01switch",
-        "correctHm0",
-        "dtbc",
-        "dthetaS_XB",
-        "fcutoff",
-        "nonhspectrum",
-        "nspectrumloc",
-        "nspr",
-        "random",
-        "sprdthr",
-        "trepfac",
-        "wbcEvarreduce",
-        "wbcScaleEnergy",
-        "wbcRemoveStokes",
-        "wbcversion"
-    ],
-    "Wave breaking parameters": [
-        "break",
-        "gamma",
-        "gamma2",
-        "alpha",
-        "deltahmin",
-        "fwfile"
-    ],
-    "Roller parameters": [
-        "beta"
-    ],
-    "Morphology parameters": [
-        "morstart",
-        "morfac",
-        "wetslp",
-        "struct",
-        "ne_layer",
-        "Hswitch"
-    ],
-    "Sediment input": [
-        "por",
-        "ws",
-        "rhos",
-        "ngd"
-    ],
-    "Bed update numerics parameters": [
-        "nTrepavaltime"
-    ],
-    "Sediment transport parameters": [
-        "form",
-        "waveform",
-        "facSk",
-        "facAs",
-        "bulk",
-        "alfaD50",
-        "oldTsmin",
-        "oldhmin",
-        "bulk"
+        "eps_sd",
+        "umin",
+        "hmin",
+        "secorder",
+        "oldhu",
+        "maxfacg"
     ],
     "Sediment transport numerics parameters": [
+        "thetanum",
+        "sourcesink",
+        "cmax",
+        "oldTsmin",
         "dtlimTs"
     ],
-    "Avalanching": [
-        "wetslp",
-        "dryslp",
-        "fixedavaltime"
+    "Bed update numerics parameters": [
+        "frac_dz",
+        "nd_var",
+        "split",
+        "merge",
+        "nsetbathy",
+        "setbathyfile"
     ],
-
-    "Hotstart": [
-        "writehotstart",
-        "hotstart",
-        "hotstartfileno",
-        "tinth"
+    "MPI parameters": [
+        "mpiboundary",
+        "mpiboundary_str",
+        "mmpi",
+        "nmpi"
     ],
-
-    "Output": [
-        "outputformat",
-        "tintg",
-        "tintm",
-        "tstart",
-        "tintp",
-        "tintc",
-        "nrugdepth",
-        "outputprecision",
-        "timings"
-    ],
-
-    "_Output": [
+    "_Output variables": [
         "nglobalvar",
         "nmeanvar",
         "npointvar",
         "npoints"
-    ], 
-    
-    "par":[
-        "This will store parameters that are missing from all the other sections"
     ]
 }

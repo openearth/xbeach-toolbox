@@ -39,9 +39,6 @@ class XBeachModelSetup():
         self.friction_layer = None
         self.wavefriction_layer = None
 
-        # WaveHello Added these 
-        self.wavefriction = None
-        self.friction = None
         self.nebed = None
         self.struct = None
         
@@ -74,6 +71,21 @@ class XBeachModelSetup():
         elif not(self.wbctype is None):
             # if the wbctype was already specified through prescribing the right boundary conditions, than infer the wbctype from there
             input_par_dict['wbctype'] = self.wbctype
+
+        ## specify the friction file with its default name
+        if not(self.friction_layer is None) and not('bedfricfile' in input_par_dict):
+            input_par_dict['bedfricfile'] = 'friction.dep'
+
+        ## specify the fw file with its default name
+        if not(self.wavefriction_layer is None) and not('fwfile' in input_par_dict):
+            input_par_dict['fwfile'] = 'wavefriction.dep'
+
+        if not(self.friction_layer is None):
+            if 'bedfriction' in input_par_dict:
+                print("Warning: bedfriction type is set through the set_friction() function. Specifying it through the parameter dict,  \
+                      this will be overwritten. Make sure it matches the definition of the friction map input")
+            else:
+                input_par_dict['bedfriction'] = self.bedfriction
 
         # Get the json file that contains all of the parameters in ther proper subsection so that the self.input_par
         # can be put under the right headers
@@ -173,10 +185,10 @@ class XBeachModelSetup():
         self.thetamin   = thetamin
         self.thetamax   = thetamax
         self.thetanaut  = thetanaut
-        self.dtheta     = dtheta
         self.vardx  = 1
         self.alfa = alfa
         self.dtheta_s = dtheta_s
+        self.dtheta     = dtheta
 
     def set_nebed(self, nebed, struct=1):      
         '''
@@ -195,40 +207,38 @@ class XBeachModelSetup():
         self.nebed = nebed
         self.struct = struct
 
-    def set_friction(self, friction, friction_layer = 1):      
+    def set_friction(self, friction_layer, bedfriction = 'manning'):      
         '''
         function to set friction layer for the xbeach model
 
         Parameters
         ----------
-        friction : input of sandy layer thickness
-        friction_layer : optional yes/no. The default is 1.
+        friction_layer : input field with friction values
+        bedfriction : optional, string. The default is 'manning'.
 
         Returns
         -------
         None.
 
         '''
-        self.friction = friction
         self.friction_layer = friction_layer
+        self.bedfriction = bedfriction
 
         # TODO option to specify what kind of bed friction there is: Manning/Chezy or else
 
-    def set_wavefriction(self, wavefriction, wavefriction_layer = 1):      
+    def set_wavefriction(self, wavefriction_layer):      
         '''
         function to set wave friction layer for the xbeach model
 
         Parameters
         ----------
-        wavefriction : input of sandy layer thickness
-        wavefriction_layer : optional yes/no. The default is 1.
+        wavefriction_layer : input of wave friction values Cf
 
         Returns
         -------
         None.
 
         '''
-        self.wavefriction = wavefriction
         self.wavefriction_layer = wavefriction_layer
 
     @staticmethod
@@ -610,7 +620,7 @@ class XBeachModelSetup():
                 for i in range(num_vals):
                     # Write the param vals into each column
                     for param in self.required_wbc_params:
-                        f.write('{} '.format(self.waves_boundary[param][i]))
+                        f.write('{}\t'.format(self.waves_boundary[param][i]))
                     
                     # Set up the next row
                     f.write('\n')
@@ -651,7 +661,7 @@ class XBeachModelSetup():
         # Def a function to format the header lines 
 
         
-        function_name = "_write_params_metadata"
+        function_name = "XBeachModelSetup.set_params"
 
         header = [
         "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%",
@@ -688,7 +698,7 @@ class XBeachModelSetup():
         file.write('alfa\t= {}\n'.format(self.alfa).expandtabs(tab_number)) 
         file.write('xfile\t= x.grd\n'.expandtabs(tab_number))
 
-        # Check that the model has a y-grid (ie. that's its 2d)
+        # Check that the model has a y-grid
         if not self.ygr is None:
             file.write('yfile\t= y.grd\n'.expandtabs(tab_number))
 
@@ -739,6 +749,11 @@ class XBeachModelSetup():
                    "wbctype at the top of the params.txt file"
                 ))
         
+        # if not renamed to something specific, use jonswap.txt as the bcfile name in case of jonstable wbctype
+        if ((ordered_param_dict['Wave boundary condition parameters']['wbctype'] == 'jonstable')
+            and ("bcfile" not in ordered_param_dict['Wave boundary condition parameters'])):
+            ordered_param_dict['Wave boundary condition parameters']['bcfile'] = 'jonswap.txt'
+
         # Loop over the parameter categories in the input dict...
         for par_category in ordered_param_dict:
             ## skip category starting with _. The name of the category is set in the JSON file
@@ -832,8 +847,8 @@ class XBeachModelSetup():
                          "y.grd": self.ygr, 
                          "bed.dep": self.zgr,
                          "ne_bed.dep": self.nebed,
-                         "friction.dep": self.friction,
-                         "wavefriction.dep": self.wavefriction
+                         "friction.dep": self.friction_layer,
+                         "wavefriction.dep": self.wavefriction_layer
                          } 
         
         # Loop over the dict...
@@ -1006,11 +1021,11 @@ class XBeachModelSetup():
                 plt.axis("scaled")
                 plt.grid("on")
                 
-        if self.friction_layer == 1:
+        if not(self.friction_layer is None):
             if not self.fast1D == True:
                 fig3 = plt.figure()
 
-                plt.pcolor(self.xgr, self.ygr, self.friction)
+                plt.pcolor(self.xgr, self.ygr, self.friction_layer)
                 plt.xlabel("x")
                 plt.ylabel("y")
                 plt.colorbar()
@@ -1020,11 +1035,11 @@ class XBeachModelSetup():
                 plt.axis("scaled")
                 plt.grid("on")
                 
-        if self.wavefriction_layer == 1:
+        if not(self.wavefriction_layer is None):
             if not self.fast1D == True:
                 fig4 = plt.figure()
 
-                plt.pcolor(self.xgr, self.ygr, self.wavefriction)
+                plt.pcolor(self.xgr, self.ygr, self.wavefriction_layer)
                 plt.xlabel("x")
                 plt.ylabel("y")
                 plt.colorbar()
@@ -1036,7 +1051,7 @@ class XBeachModelSetup():
             fig1.savefig(os.path.join(save_path, "domain.png"), dpi=250)
             if self.struct == 1 and not self.fast1D == True:
                 fig2.savefig(os.path.join(save_path, "ne_bed.png"), dpi=250)
-            if self.friction_layer == 1 and not self.fast1D == True:
+            if not(self.friction_layer is None) and not self.fast1D == True:
                 fig3.savefig(os.path.join(save_path, "friction.png"), dpi=250)
-            if self.wavefriction_layer == 1 and not self.fast1D == True:
+            if not(self.wavefriction_layer is None) and not self.fast1D == True:
                 fig4.savefig(os.path.join(save_path, "wavefriction.png"), dpi=250)
