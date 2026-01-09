@@ -776,11 +776,11 @@ class XBeachModelSetup():
         Write the variables that should be output by the xBeach model into the params file"""
         
         ## write output variables
-        if '_Output' in self.input_par:
+        if '_Output variables' in self.input_par:
             file.write(f"{format_subsection_header("Output variables")}\n" )
             file.write('\n')
-            for par in self.input_par['_Output']:
-                dummy = self.input_par['_Output'][par]
+            for par in self.input_par['_Output variables']:
+                dummy = self.input_par['_Output variables'][par]
                 file.write('{}\t= {}\n'.format(par,len(dummy)).expandtabs(tab_number))
 
                 if not isinstance(dummy, list):
