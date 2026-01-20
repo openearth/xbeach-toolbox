@@ -17,7 +17,7 @@ import matplotlib.colors as colors
 import matplotlib.dates as mdates
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import FuncFormatter, IndexLocator
-from scipy.interpolate import interp2d
+from scipy.interpolate import interp2d, RectBivariateSpline
 import xbTools as xb
 import warnings
 import re
@@ -203,7 +203,7 @@ class XBeachModelAnalysis():
         ixlist = [i for i, var in enumerate(dat) if 'nglobalvar' in var]
         if len(ixlist) > 0:
             i0 = ixlist[0]
-            params['globalvar'] = dat[i0+1:i0+int(params['nglobalvar']+1)]
+            params['globalvar'] = [d.strip() for d in dat[i0+1:i0+int(params['nglobalvar']+1)]]
         else:
             params['nglobalvar'] = 0
             params['globalvar'] = []
@@ -212,7 +212,7 @@ class XBeachModelAnalysis():
         ixlist = [i for i, var in enumerate(dat) if 'nmeanvar' in var]
         if len(ixlist) > 0:
             i0 = ixlist[0]
-            params['meanvar'] = dat[i0+1:i0+int(params['nmeanvar']+1)]
+            params['meanvar'] = [d.strip() for d in dat[i0+1:i0+int(params['nmeanvar']+1)]]
         else:
             params['nmeanvar'] = 0
             params['meanvar'] = []
@@ -221,7 +221,7 @@ class XBeachModelAnalysis():
         ixlist = [i for i, var in enumerate(dat) if 'npointvar' in var]
         if len(ixlist) > 0:
             i0 = ixlist[0]
-            params['pointvar'] = dat[i0+1:i0+int(params['npointvar']+1)]
+            params['pointvar'] = [d.strip() for d in dat[i0+1:i0+int(params['npointvar']+1)]]
         else:
             params['npointvar'] = 0
             params['pointvar'] = []
@@ -272,10 +272,13 @@ class XBeachModelAnalysis():
                 self.grd['z'] = -1*self.grd['z']
 
         # read y
-        if self.params['ny'] > 0:
+        if self.params['yfile'] != '':
             self.grd['y'] = np.loadtxt(os.path.join(self.model_path, self.params['yfile']))
+            if self.grd['y'].ndim==1:
+                self.grd['y']= self.grd['y'][np.newaxis, ...] 
             if (self.grd['y'].shape != (self.params['ny'] + 1, self.params['nx'] + 1)):
                 print('warning: y grid not of size specified in params.txt')
+
         # struct
         if ('struct' in self.params) == 1:
             if self.params['struct']==1:
@@ -497,7 +500,7 @@ class XBeachModelAnalysis():
             var (_type_): _description_
         """        
         if var in self.var:
-            print("Variable already loaded")
+            # print("{} already loaded".format(var))
             return
 
         if '_mean' in var:
@@ -996,7 +999,7 @@ class XBeachModelAnalysis():
             self.load_modeloutput(var)
         except:
             print('var not found as output specified in params. Will try to continue to see if computed earlier')
-        self.load_modeloutput('zb')
+        
 
         x = self.var['globalx']
         y = self.var['globaly']
@@ -1047,6 +1050,9 @@ class XBeachModelAnalysis():
                     self.load_modeloutput('zs_min')
                     self.load_modeloutput('zb_mean')
                     data = np.where((self.var['zs_min'][it, iy, :]-self.var['zb_mean'][it, iy, :]).flatten()>=0.01, data, np.nan)
+                    # also remove values behind berm/dune etc
+                    inan = np.where(np.isnan(data))[0][0]
+                    data[inan:] = np.nan
                 except:
                     print('zs_min or zb_mean not saved on file, so no dry points are removed from the plot')
             else:
@@ -1073,13 +1079,19 @@ class XBeachModelAnalysis():
             ax1.set_xlabel('cross shore [m]')
 
         if plot_ref_bathy:
+            
 
             if '_mean' in var:
                 itz = np.where(self.var['globaltime']>=t)[0][0]
             else:
                 itz = it
-
-            z = self.var['zb'][itz, iy, :]
+            
+            try:
+                self.load_modeloutput('zb')
+                z = self.var['zb'][itz, iy, :]
+            except:
+                print('zb not on global model output, plotting initial bathymetry instead')
+                z = self.grd['z'][iy, :]
 
             ax2 = ax1.twinx()
             ax1.set_zorder(ax2.get_zorder() + 1)  # move ax in front
@@ -1219,31 +1231,42 @@ class XBeachModelAnalysis():
             it = len(self.var['globaltime']) - 1
         assert it <= len(self.var['globaltime']) - 1, 'it should be <= {}'.format(len(self.var['globaltime']) - 1)
 
+        # # round to cm precision to avoid interpolation issues
+        # x = np.round(np.flipud(self.var['localx'].data), 2)
+        # y = np.round(np.flipud(self.var['localy'].data), 2)
+        x = self.var['localx'][0, :]
+        y = self.var['localy'][:, 0]
 
-        x = np.flipud(self.var['localx'].data)
-        y = np.flipud(self.var['localy'].data)
         if len(self.var[var[0]].shape)==3:
-            u = np.flipud(self.var[var[0]][it, :, :].data)
-            v = np.flipud(self.var[var[1]][it, :, :].data)
+            # u = np.flipud(self.var[var[0]][it, :, :].data)
+            # v = np.flipud(self.var[var[1]][it, :, :].data)
+            u = self.var[var[0]][it, :, :]
+            v = self.var[var[1]][it, :, :]
             u[u < -100] = 0
             v[v < -100] = 0
             data = np.sqrt((self.var[var[0]][it, :, :]) ** 2 + (self.var[var[1]][it, :, :]) ** 2).squeeze()
 
         elif len(self.var[var[0]].shape)==4:
-            u = np.flipud(self.var[var[0]][it, ifrac, :, :].data)
-            v = np.flipud(self.var[var[1]][it, ifrac, :, :].data)
+            # u = np.flipud(self.var[var[0]][it, ifrac, :, :].data)
+            # v = np.flipud(self.var[var[1]][it, ifrac, :, :].data)
+            u = self.var[var[0]][it, ifrac, :, :]
+            v = self.var[var[1]][it, ifrac, :, :]
             data = np.sqrt((self.var[var[0]][it, ifrac, :, :]) ** 2 + (self.var[var[1]][it, ifrac, :, :]) ** 2).squeeze()
 
         u, v = rotate_grid(u, v, self.var['gridang'])
 
-        fu = interp2d(x[:, 0], y[0, :], u.T)
-        fv = interp2d(x[:, 0], y[0, :], v.T)
+        # fu = interp2d(x[:, 0], y[0, :], u.T)
+        # fv = interp2d(x[:, 0], y[0, :], v.T)
+        from scipy.interpolate import RegularGridInterpolator
+        fu = RegularGridInterpolator((x, y), u.T)
+        fv = RegularGridInterpolator((x, y), v.T)
 
-        xt = np.arange(x[0, 0], x[-1, 0], streamspacing)
-        yt = np.arange(y[0, 0], y[0, -1], streamspacing)
+
+        xt = np.arange(x[0], x[-1], streamspacing)
+        yt = np.arange(y[0], y[-1], streamspacing)
         X,Y = np.meshgrid(xt,yt)
-        ut = fu(xt, yt)
-        vt = fv(xt, yt)
+        ut = fu((X, Y))
+        vt = fv((X,Y))
 
         if 'color' not in kwargs:
             kwargs['color'] = 'white'
@@ -1252,11 +1275,12 @@ class XBeachModelAnalysis():
         ax.quiver(X, Y, ut, vt, units='xy', pivot='middle', **kwargs)
         # ax.streamplot(X, Y, ut, vt, color='k')
 
-        fig.tight_layout()
+        
         if self.globalstarttime is None:
             ax.set_title('t = {:.1f}Hr'.format(self.var['globaltime'][it] ))
         else:
             ax.set_title('t = {}'.format(self.var['globaltime'][it]))
+        fig.tight_layout()
         if self.save_fig:
             folder = os.path.join(self.model_path, 'fig', 'map_quiver_{}'.format(var[0]))
             if not os.path.exists(folder):
