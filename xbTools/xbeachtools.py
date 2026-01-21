@@ -770,7 +770,14 @@ class XBeachModelSetup():
                 file.write('{}\t= {}\n'.format(par,ordered_param_dict[par_category][par]).expandtabs(tab_number))
 
             file.write('\n')
-    
+
+        # Loop over the parameters that were not on the JSON file
+        file.write(f"{format_subsection_header("Other parameters")}\n" )
+        file.write('\n')
+        for par in self.input_par['par']:
+            file.write('{}\t= {}\n'.format(par,self.input_par['par'][par]).expandtabs(tab_number))
+        file.write('\n')
+
     def _write_params_output_vars(self, file, tab_number):
         """
         Write the variables that should be output by the xBeach model into the params file"""
@@ -802,8 +809,7 @@ class XBeachModelSetup():
             # Write the metadata at the top of the file
             self._write_params_metadata(f, current_date, user)
 
-            # Write the general data
-            
+            # Write the general data            
             self._write_params_grid_data(f, tab_number)
 
             ## tide 
