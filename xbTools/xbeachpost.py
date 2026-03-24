@@ -750,7 +750,7 @@ class XBeachModelAnalysis():
 
         return fig, ax
 
-    def fig_map_var(self, var, label=None, it=np.inf, figsize=None, figax=None, japlot_mpi_boundaries = False, **kwargs):
+    def fig_map_var(self, var, label=None, it=np.inf, itype=None, figsize=None, figax=None, japlot_mpi_boundaries = False, **kwargs):
         """_summary_
 
         Args:
