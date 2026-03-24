@@ -166,8 +166,8 @@ class XBeachModelSetup():
             self.zgr = zgr
         
         ##
-        self.nx = self.xgr.shape[1] - 1
-        self.ny = self.xgr.shape[0] - 1
+        self.nx = np.atleast_2d(self.xgr).shape[1] - 1
+        self.ny = np.atleast_2d(self.xgr).shape[0] - 1
         
         ## 1D
         if ygr is None or ygr.shape[0]==1:
@@ -771,12 +771,13 @@ class XBeachModelSetup():
 
             file.write('\n')
 
-        # Loop over the parameters that were not on the JSON file
-        file.write(f"{format_subsection_header("Other parameters")}\n" )
-        file.write('\n')
-        for par in self.input_par['par']:
-            file.write('{}\t= {}\n'.format(par,self.input_par['par'][par]).expandtabs(tab_number))
-        file.write('\n')
+        if len(self.input_par['par'])>0:
+            # Loop over the parameters that were not on the JSON file
+            file.write(f"{format_subsection_header("Other parameters")}\n" )
+            file.write('\n')
+            for par in self.input_par['par']:
+                file.write('{}\t= {}\n'.format(par,self.input_par['par'][par]).expandtabs(tab_number))
+            file.write('\n')
 
     def _write_params_output_vars(self, file, tab_number):
         """

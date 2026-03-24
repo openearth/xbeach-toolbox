@@ -370,10 +370,12 @@ def grid_transition(cell1, cell2, distance):
     
     i = np.where(errors==np.nanmin(errors))[0]
     
-    if len(i)>0:
-        nf = int(n[i])
-        ff = np.asarray(f)[i]
-        error = errors[i]/cell2
-        gridf = np.cumsum(cell1 * np.power(ff,np.arange(1,nf+1,1)) )
+    if isinstance(i, np.ndarray):
+        i = i[0]
+        
+    nf = int(n[i])
+    ff = np.asarray(f)[i]
+    error = errors[i]/cell2
+    gridf = np.cumsum(cell1 * np.power(ff,np.arange(1,nf+1,1)) )
     
     return ff, nf, gridf, error
