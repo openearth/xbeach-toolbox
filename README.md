@@ -1,5 +1,5 @@
 [![ReadTheDocs](http://readthedocs.org/projects/xbeach-toolbox/badge/?version=latest)](http://xbeach-toolbox.readthedocs.io/en/latest/)
-[![pytest-py310](https://github.com/openearth/xbeach-toolbox/actions/workflows/pytest-py310.yml/badge.svg?branch=main)](https://github.com/openearth/xbeach-toolbox/actions/workflows/pytest-py310.yml)
+[![pytest-py310](https://github.com/openearth/xbeach-toolbox/actions/workflows/pytest-py312.yml/badge.svg?branch=main)](https://github.com/openearth/xbeach-toolbox/actions/workflows/pytest-py312.yml)
 [![pylint](https://github.com/openearth/xbeach-toolbox/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/openearth/xbeach-toolbox/actions/workflows/pylint.yml)
 [![pypi-upload](https://github.com/openearth/xbeach-toolbox/actions/workflows/pypi-upload.yml/badge.svg?branch=main)](https://github.com/openearth/xbeach-toolbox/actions/workflows/pypi-upload.yml)
 
