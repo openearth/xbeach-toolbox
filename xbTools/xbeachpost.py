@@ -100,6 +100,8 @@ class XBeachModelAnalysis():
             icdps = [True if 'computational domains on processors' in x else False for x in self.metadata]
             icdp = np.argwhere(icdps)[0][0]
             iadd = 0
+            data = []
+            line = self.metadata[0]
             while not ('----') in line:       
                 iadd+=1        
                 data.append([float(x) for x in self.metadata[int(iadd+icdp)].split()])
@@ -890,7 +892,7 @@ class XBeachModelAnalysis():
 
         return dat1, dat2
     
-    def fig_map_diffvar(self, var, label, it0=0, itend=np.inf, clim=None, figsize=None, **kwargs):
+    def fig_map_diffvar(self, var, label, it0=0, itend=np.inf, itype=None, clim=None, figsize=None, **kwargs):
         """_summary_
 
         Args:
