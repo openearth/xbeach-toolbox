@@ -100,6 +100,7 @@ class XBeachModelAnalysis():
             icdps = [True if 'computational domains on processors' in x else False for x in self.metadata]
             icdp = np.argwhere(icdps)[0][0]
             iadd = 0
+            data = []
             line = self.metadata[0]
             while not ('----') in line:       
                 iadd+=1        
