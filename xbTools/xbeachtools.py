@@ -161,9 +161,10 @@ class XBeachModelSetup():
                 self.zgr = zgr
         ## 2D model
         else:
-            self.ygr = ygr
-            self.xgr = xgr
-            self.zgr = zgr
+            if xgr.ndim==1:
+                self.ygr = ygr[np.newaxis, ...] 
+                self.xgr = xgr[np.newaxis, ...]
+                self.zgr = zgr[np.newaxis, ...]
         
         ##
         self.nx = np.atleast_2d(self.xgr).shape[1] - 1

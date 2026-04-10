@@ -300,7 +300,9 @@ class XBeachModelAnalysis():
             self.waves_boundary['mainang'] = dat[:, 2]
             self.waves_boundary['gammajsp'] = dat[:, 3]
             self.waves_boundary['s'] = dat[:, 4]
-
+            self.waves_boundary['duration'] = dat[:, 5]
+            self.waves_boundary['dtbc'] = dat[:, 6]
+            
             if self.globalstarttime is None:
                 self.waves_boundary['time'] = np.cumsum(dat[:, 5])
             else:
