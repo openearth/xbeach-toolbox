@@ -169,6 +169,7 @@ class XBeachModelAnalysis():
         """        
         assert type(tstart) is str, 'tstart must be given as a string of the format 2021-10-11T13:00:00'
         self.globalstarttime = np.datetime64(tstart)
+        self.load_output_coordinates()
 
     def get_params(self):
         """
