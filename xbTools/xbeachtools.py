@@ -22,6 +22,9 @@ from xbTools.general.file_utils import (write_2d_arr_2_file, format_subsection_h
                                        format_header_line, get_json)
 
 
+import warnings
+
+
 class XBeachModelSetup():
     '''
     XBeach model setup class
@@ -293,7 +296,7 @@ class XBeachModelSetup():
 
         try:
             required_params = wbctype_options[wbctype]
-        except KeyError as error:
+        except KeyError:
             raise KeyError("Input: {} is not an option for wbctype conditions.\
                            Possible options are: {}".format(wbctype, wbctype_options.keys()))
         
@@ -358,7 +361,7 @@ class XBeachModelSetup():
 
         try:
             required_params = instat_type_options[instat_type]
-        except KeyError as error:
+        except KeyError:
             raise KeyError("Input: {} is not an option for instat_type conditions.\
                            Possible options are: {}".format(instat_type, instat_type_options.keys()))
         
@@ -597,7 +600,7 @@ class XBeachModelSetup():
         # Check if the  jonswap should be a table or a single entry of values
         try:
             write_table = write_table_dict[self.wbctype]
-        except KeyError as error:
+        except KeyError:
             raise KeyError("Input wbctype: {} doesn't currently support writing a jonswap file. \
                            The conditons that are implemented are: {}".format(self.wbctype, write_table.keys()))
 
@@ -975,6 +978,8 @@ class XBeachModelSetup():
         None.
 
         '''
+        warnings.filterwarnings("ignore", category=SyntaxWarning)
+        
         fig1 = plt.figure(figsize=(8,8))
         thetamin_uv, thetamax_uv = self._make_theta_vectors()
         if self.fast1D==True:
