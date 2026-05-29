@@ -234,7 +234,7 @@ class XBeachModelAnalysis():
             points = dat[i0 + 1:i0 + int(params['npoints'] + 1)]
 
             # get points 
-            p_spl = [ re.split('\t| ',t) for t in points]
+            p_spl = [ re.split('\t| |,',t) for t in points]
             # remove empty entries
             p_spl = [[p for p in p_spli if p.split()] for p_spli in p_spl]
             # xy

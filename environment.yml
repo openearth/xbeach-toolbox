@@ -1,0 +1,19 @@
+name: xbeach-toolbox
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.13 
+  - jupyterlab # to run examples
+  - numpy
+  - pandas
+  - matplotlib # to run examples
+  - shapely
+  - scipy
+  - netcdf4
+  - pip
+  - geopandas  # for preparing files for for visualizing the mesh
+  - fiona      # for preparing files for visualizing mesh in GIS software
+  - pip:
+    - jupyter

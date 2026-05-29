@@ -27,7 +27,7 @@
         "rainfall",
         "refraction"
     ],
-    "Grid parameters": [
+    "_Grid parameters": [
         "depfile",
         "posdwn",
         "nx",
@@ -131,7 +131,7 @@
         "tidetype",
         "tidetype_str"
     ],
-    "Tide boundary conditions": [
+    "_Tide boundary conditions": [
         "zs0file",
         "tideloc",
         "paulrevere",

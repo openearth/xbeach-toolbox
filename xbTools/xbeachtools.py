@@ -22,6 +22,9 @@ from xbTools.general.file_utils import (write_2d_arr_2_file, format_subsection_h
                                        format_header_line, get_json)
 
 
+import warnings
+
+
 class XBeachModelSetup():
     '''
     XBeach model setup class
@@ -86,6 +89,14 @@ class XBeachModelSetup():
                       this will be overwritten. Make sure it matches the definition of the friction map input")
             else:
                 input_par_dict['bedfriction'] = self.bedfriction
+
+        if not(self.struct is None):
+            if 'struct' in input_par_dict:
+                print("Warning: struct is set through the set_nebed() function. Specifying it through the parameter dict,  \
+                      this will be overwritten. Make sure it matches the definition of the set_nebed input")
+            else:
+                input_par_dict['struct'] = self.struct
+                input_par_dict['ne_layer'] = 'ne_bed.dep'
 
         # Get the json file that contains all of the parameters in ther proper subsection so that the self.input_par
         # can be put under the right headers
@@ -293,7 +304,7 @@ class XBeachModelSetup():
 
         try:
             required_params = wbctype_options[wbctype]
-        except KeyError as error:
+        except KeyError:
             raise KeyError("Input: {} is not an option for wbctype conditions.\
                            Possible options are: {}".format(wbctype, wbctype_options.keys()))
         
@@ -358,7 +369,7 @@ class XBeachModelSetup():
 
         try:
             required_params = instat_type_options[instat_type]
-        except KeyError as error:
+        except KeyError:
             raise KeyError("Input: {} is not an option for instat_type conditions.\
                            Possible options are: {}".format(instat_type, instat_type_options.keys()))
         
@@ -597,7 +608,7 @@ class XBeachModelSetup():
         # Check if the  jonswap should be a table or a single entry of values
         try:
             write_table = write_table_dict[self.wbctype]
-        except KeyError as error:
+        except KeyError:
             raise KeyError("Input wbctype: {} doesn't currently support writing a jonswap file. \
                            The conditons that are implemented are: {}".format(self.wbctype, write_table.keys()))
 
@@ -708,18 +719,18 @@ class XBeachModelSetup():
         file.write('thetamax\t= {}\n'.format(self.thetamax).expandtabs(tab_number))
         file.write('thetanaut\t= {}\n'.format(self.thetanaut).expandtabs(tab_number))
         file.write('dtheta\t= {}\n'.format(self.dtheta).expandtabs(tab_number))
-        file.write('dtheta_s\t= {}\n'.format(self.dtheta).expandtabs(tab_number))
+        file.write('dtheta_s\t= {}\n'.format(self.dtheta_s).expandtabs(tab_number))
         file.write('\n')
 
     def _write_params_tide_data(self, file, tab_number):
         """
         Write the tide data to the file
         """
-        file.write(f"{format_subsection_header("Tide Boundary Conditions")}\n" )
+        file.write(f"{format_subsection_header("Tide boundary conditions")}\n" )
         file.write('\n')     
 
         if self.zs0type == 'par':
-            file.write('zs0\t= {}\n'.format())    
+            file.write('zs0\t= {}\n'.format(self.zs0).expandtabs(tab_number))    
 
         elif self.zs0type == 'list':
             for item in self.tide_boundary:
@@ -975,6 +986,8 @@ class XBeachModelSetup():
         None.
 
         '''
+        warnings.filterwarnings("ignore", category=SyntaxWarning)
+        
         fig1 = plt.figure(figsize=(8,8))
         thetamin_uv, thetamax_uv = self._make_theta_vectors()
         if self.fast1D==True:
