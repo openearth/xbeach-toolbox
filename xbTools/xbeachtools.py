@@ -355,8 +355,8 @@ class XBeachModelSetup():
                                 'resuse'      : False, 
                                 'ts_nonh'     : ["make_file", "file_name", "dimension", "variable_dict"],
                                 'off'         : False,
-                                'stat_table'  : ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc'],
-                                'jonstable '  : ['Hm0','Tp','mainang','gammajsp','s','fnyq']
+                                'stat_table'  : ['Hm0','Trep','mainang','gammajsp','s','duration','dtbc'],
+                                'jonstable '  : ['Hm0','Tp','mainang','gammajsp','s','duration','dtbc']
                                 }
 
         try:
@@ -908,28 +908,29 @@ class XBeachModelSetup():
         else:
             nsubplots = 3
         if self.wbctype=='jonstable':
-            plt.figure()
-            plt.subplot(nsubplots,1,1)
-            plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['Hm0'],'-o')
-            plt.ylabel('$H_{m0}$ [m]')
-            plt.subplot(nsubplots,1,2)
-            plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['Tp'],'-o')
-            plt.ylabel('$T_{p}$ [s]')
-            plt.subplot(nsubplots,1,3)
-            plt.plot(np.cumsum(self.waves_boundary['duration']), self.waves_boundary['mainang'],'-o')
-            plt.ylabel('$D$ [deg N]')
+            fig, ax = plt.subplots(nsubplots, 1, sharex=True)
+            ax[0].plot(np.cumsum(self.waves_boundary['duration'])/3600, self.waves_boundary['Hm0'],'-o')
+            ax[0].set_ylabel('$H_{m0}$ [m]')
+            ax[1].plot(np.cumsum(self.waves_boundary['duration'])/3600, self.waves_boundary['Tp'],'-o')
+            ax[1].set_ylabel('$T_{p}$ [s]')
+            ax[2].plot(np.cumsum(self.waves_boundary['duration'])/3600, self.waves_boundary['mainang'],'-o')
+            ax[2].set_ylabel('$D$ [deg N]')
             
             if self.zs0type == 'list':
-                plt.subplot(nsubplots, 1, 4)
+                # ax[3].plot(self.zs0[:, 0]/3600, self.zs0[:,1:],'-o')
                 for icorner in range(self.zs0.shape[1]-1):
-                    plt.plot(self.zs0[:, 0], self.zs0[:,icorner+1],'-o')
-                plt.ylabel('zs [m]')
-                plt.xlabel('Time')    
+                    ax[3].plot(self.zs0[:, 0]/3600, self.zs0[:,icorner+1],'-o')
+                ax[3].set_ylabel('zs [m]')
+                ax[3].set_xlabel('Time [hr]')    
 
             else:
                 # plot xlabel on last subplot
-                plt.xlabel('Time')        
-            
+                ax[-1].set_xlabel('Time [hr]') 
+
+                
+            # tight xlim 
+            ax[-1].set_xlim(0, np.cumsum(self.waves_boundary['duration'])[-1]/3600)
+
             plt.tight_layout()
 
             if save_path!=None:

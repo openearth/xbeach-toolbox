@@ -54,6 +54,7 @@ class XBeachModelAnalysis():
         self.plot_km_coords = False
         self.AOI = []
         self.globalstarttime = None
+        self.verbose = True
 
         self.vector_vars = ['u', 'v', 'ue', 've', 'Subg', 'Svbg', 'Susg', 'Svsg',
                           'u_mean', 'v_mean', 'ue_mean', 've_mean', 'Subg_mean', 'Svbg_mean', 'Susg_mean', 'Svsg_mean',
@@ -66,6 +67,16 @@ class XBeachModelAnalysis():
         self.load_grid()
         self._cross_offset = 0
         self.load_output_coordinates()
+
+    def set_verbose(self, yesno):
+        """Set the verbosity of the class, if set to False no log statements will be made
+           Warnings will however still be issued when necessary.
+
+        Args:
+            yesno (bool): If True, log statements will be printed. If False, log statements will be suppressed.
+        """        
+        assert type(yesno) is bool, 'input type must be bool'
+        self.verbose = yesno
 
     def get_metadata(self):
         '''
@@ -522,11 +533,13 @@ class XBeachModelAnalysis():
 
         # if not yet present, load coordinates
         if self.var == {}:
-            print('loading model output coordinates from file')
+            if self.verbose:
+                print('loading model output coordinates from file')
             self.load_output_coordinates()
 
         ds = nc.Dataset(os.path.join(self.model_path, 'xboutput.nc'))
-        print('loading variable {} from file'.format(var))
+        if self.verbose:
+            print('loading variable {} from file'.format(var))
         dat = ds.variables[var][:]
 
         #mean and point output might not be available if the eor is not reached. Therefore cut
@@ -545,7 +558,8 @@ class XBeachModelAnalysis():
 
         if not ('point_' in var):
             if len(self.AOI) > 0:
-                print('slicing map output to AOI')
+                if self.verbose:
+                    print('slicing map output to AOI')
                 if len(dat.shape) == 2:
                     self.var[var] = dat[self.AOI[0]:self.AOI[1], self.AOI[2]:self.AOI[3]]
                 elif len(dat.shape) == 3:
@@ -605,7 +619,8 @@ class XBeachModelAnalysis():
             return self.var['pointtime'][:Nt-1], self.var[var][:Nt-1, index]
         elif len(self.var[var].shape)==3:
             if isedlayer==None:
-                print('no isedlayer specified, using first layer')
+                if self.verbose:
+                    print('no isedlayer specified, using first layer')
                 isedlayer=0
             return self.var['pointtime'][:Nt-1], self.var[var][:Nt-1, isedlayer, index]
 
@@ -634,8 +649,15 @@ class XBeachModelAnalysis():
         assert 'zs0file' in self.params, 'No tidal signal available'
 
         # get model output
-        self.load_modeloutput('zs_mean')
-        zs = self.var['zs_mean']
+        zsmean = True
+        try:
+            self.load_modeloutput('zs_mean')
+            zs = self.var['zs_mean']
+        except:
+            print('warning: zs_mean not on the output, lets see if we can do zs instead')
+            self.load_modeloutput('zs')
+            zs = self.var['zs']
+            zsmean = False
 
         # get model input
         if self.tide == {}:
@@ -644,10 +666,17 @@ class XBeachModelAnalysis():
         zs0_tide = self.tide['zs0']
         if self.globalstarttime is None:
             t_tide = self.tide['time'] / 3600
-            t = self.var['meantime'] / 3600
+            if zsmean:
+                t = self.var['meantime'] / 3600
+            else:
+                t = self.var['globaltime'] / 3600
+
         else:
             t_tide = self.tide['time']
-            t = self.var['meantime']
+            if zsmean:
+                t = self.var['meantime']
+            else:
+                t = self.var['globaltime']
 
         lent = min([len(zs), len(t)])
         tideloc = self.params['tideloc']
@@ -776,18 +805,21 @@ class XBeachModelAnalysis():
         if (self.plot_localcoords is False) or (not (var in self.vector_vars)):
             if len(self.var[var].shape)==4:
                 if itype is None:
-                    print('using first sed type for printing. For others, set itype>=1')
+                    if self.verbose:
+                        print('using first sed type for printing. For others, set itype>=1')
                     itype = 0
                 data = self.var[var][it, itype, :, :]
             else:
                 data = self.var[var][it, :, :]
 
         else:
-            print('this variable is rotated to gridori in the postprocessing scripts')
+            if self.verbose:
+                print('this variable is rotated to gridori in the postprocessing scripts')
             dat1, dat2 = self._get_var_vector_pair(var)
             if len(self.var[var].shape)==4:
                 if itype is None:
-                    print('using first sed type for printing. For others, set itype>=1')
+                    if self.verbose:
+                        print('using first sed type for printing. For others, set itype>=1')
                     itype = 0
                 dat1 = dat1[it, itype, :, :]
                 dat2 = dat2[it, itype, :, :]
@@ -929,7 +961,8 @@ class XBeachModelAnalysis():
         if (self.plot_localcoords is False) or (not (var in self.vector_vars)):
             if len(self.var[var].shape)==4:
                 if itype is None:
-                    print('using first sed type for printing. For others, set itype>=1')
+                    if self.verbose:
+                        print('using first sed type for printing. For others, set itype>=1')
                     itype = 0
                 var0 = self.var[var][it0, itype, :, :]
                 varend = self.var[var][itend, itype, :, :]
@@ -938,11 +971,13 @@ class XBeachModelAnalysis():
                 varend = self.var[var][itend, :, :]
 
         else:
-            print('this variable is rotated to gridori in the postprocessing scripts')
+            if self.verbose:
+                print('this variable is rotated to gridori in the postprocessing scripts')
             dat1, dat2 = self._get_var_vector_pair(var)
             if len(self.var[var].shape)==4:
                 if itype is None:
-                    print('using first sed type for printing. For others, set itype>=1')
+                    if self.verbose:
+                        print('using first sed type for printing. For others, set itype>=1')
                     itype = 0
                 var01 = dat1[it0, itype, :, :]
                 varend1 = dat1[itend, itype, :, :]    
@@ -1019,18 +1054,21 @@ class XBeachModelAnalysis():
         if (self.plot_localcoords is False) or (not (var in self.vector_vars)):
             if len(self.var[var].shape)==4:
                 if itype is None:
-                    print('using first sed type for printing. For others, set itype>=1')
+                    if self.verbose:
+                        print('using first sed type for printing. For others, set itype>=1')
                     itype = 0
                 data = self.var[var][it, itype, iy, :]
             else:
                 data = self.var[var][it, iy, :]
 
         else:
-            print('this variable is rotated to gridori in the postprocessing scripts')
+            if self.verbose:
+                print('this variable is rotated to gridori in the postprocessing scripts')
             dat1, dat2 = self._get_var_vector_pair(var)
             if len(self.var[var].shape)==4:
                 if itype is None:
-                    print('using first sed type for printing. For others, set itype>=1')
+                    if self.verbose:
+                        print('using first sed type for printing. For others, set itype>=1')
                     itype = 0
                 dat1 = dat1[it, itype, iy, :]
                 dat2 = dat2[it, itype, iy, :]
@@ -1059,14 +1097,16 @@ class XBeachModelAnalysis():
                     inan = np.where(np.isnan(data))[0][0]
                     data[inan:] = np.nan
                 except:
-                    print('zs_min or zb_mean not saved on file, so no dry points are removed from the plot')
+                    if self.verbose:
+                        print('zs_min or zb_mean not saved on file, so no dry points are removed from the plot')
             else:
                 try:
                     self.load_modeloutput('zs')
                     self.load_modeloutput('zb')
                     data = np.where((self.var['zs'][it, iy, :]-self.var['zb'][it, iy, :]).flatten()>=0.01, data, np.nan)    
                 except:
-                    print('zs or zb not saved on file, so no dry points are removed from the plot')            
+                    if self.verbose:
+                        print('zs or zb not saved on file, so no dry points are removed from the plot')            
                                 
             
 
@@ -1095,7 +1135,8 @@ class XBeachModelAnalysis():
                 self.load_modeloutput('zb')
                 z = self.var['zb'][itz, iy, :]
             except:
-                print('zb not on global model output, plotting initial bathymetry instead')
+                if self.verbose:
+                    print('zb not on global model output, plotting initial bathymetry instead')
                 z = self.grd['z'][iy, :]
 
             ax2 = ax1.twinx()
@@ -1140,7 +1181,7 @@ class XBeachModelAnalysis():
         self.units[varname] = units
         return
 
-    def fig_profile_change(self, it=-1, iy=None, coord=None, zmin=-25, zmax=12):
+    def fig_profile_change(self, it=-1, iy=None, coord=None, zmin=-25, zmax=12, plot_zsmin=True, plot_zsmax=True, figax=None):
         """_summary_
 
         Args:
@@ -1155,7 +1196,7 @@ class XBeachModelAnalysis():
             iy, _ = np.unravel_index(((self.var['globalx'][:] - coord[0]) ** 2 + (self.var['globaly'][:] - coord[1]) ** 2).argmin(), self.var['globalx'].shape)
 
 
-        zs = self.get_modeloutput('zs')
+        
         zb = self.get_modeloutput('zb')
         cross = self.var['cross']  # because we are sure that after getting the above three variables this one is initialized
 
@@ -1169,9 +1210,25 @@ class XBeachModelAnalysis():
                     ne = self.grd['ne']
                 ne = zb[0, :, :]-ne
 
-        fig, ax = plt.subplots()
-        plt.plot(cross, np.nanmax(zs, axis=0)[iy, :], color='blue', label='zs-max')
-        plt.plot(cross, np.nanmin(zs, axis=0)[iy, :], color='royalblue', label='zs-min')
+        # only instantiate new figure if handle to pre-created fig and axis is not provided
+        if figax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig, ax = figax[0], figax[1]
+
+        if plot_zsmax:
+            try:
+                zs = self.get_modeloutput('zs_max')
+            except:
+                zs = self.get_modeloutput('zs')
+            plt.plot(cross, np.nanmax(zs, axis=0)[iy, :], color='blue', label='zs-max')
+        if plot_zsmin:
+            try:
+                zs = self.get_modeloutput('zs_min')
+            except:
+                zs = self.get_modeloutput('zs')
+            plt.plot(cross, np.nanmin(zs, axis=0)[iy, :], color='royalblue', label='zs-min')
+
         plt.plot(cross, zb[0, iy, :], color='k', label='pre')
         plt.plot(cross, zb[it, iy, :], color='r', label='post')
 
