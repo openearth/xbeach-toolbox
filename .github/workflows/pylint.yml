@@ -1,13 +1,13 @@
 name: Pylint
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10, "3.11", "3.12", "3.13"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -20,4 +20,20 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py')
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          CHANGED_PY_FILES="$(git diff --name-only "origin/${{ github.base_ref }}"...${{ github.sha }} -- '*.py')"
+        elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+          CHANGED_PY_FILES="$(git ls-files '*.py')"
+        else
+          CHANGED_PY_FILES="$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- '*.py')"
+        fi
+
+        if [ -z "${CHANGED_PY_FILES}" ]; then
+          echo "No Python files changed; skipping pylint."
+          exit 0
+        fi
+
+        echo "Running pylint on:"
+        echo "${CHANGED_PY_FILES}"
+        pylint ${CHANGED_PY_FILES}
