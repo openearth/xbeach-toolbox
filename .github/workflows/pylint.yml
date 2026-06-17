@@ -25,7 +25,7 @@ jobs:
           git fetch origin "${{ github.base_ref }}" --depth=1
           git diff --name-only -z "origin/${{ github.base_ref }}"...${{ github.sha }} -- ':(glob)**/*.py'
         elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
-          git ls-files -z -- ':(glob)**/*.py'
+          git diff-tree --no-commit-id --name-only -z -r "${{ github.sha }}" -- ':(glob)**/*.py'
         else
           git diff --name-only -z "${{ github.event.before }}" "${{ github.sha }}" -- ':(glob)**/*.py'
         fi
