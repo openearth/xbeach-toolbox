@@ -20,20 +20,22 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
+        mapfile -d '' -t CHANGED_PY_FILES < <(
         if [ "${{ github.event_name }}" = "pull_request" ]; then
           git fetch origin "${{ github.base_ref }}" --depth=1
-          CHANGED_PY_FILES="$(git diff --name-only "origin/${{ github.base_ref }}"...${{ github.sha }} -- '*.py')"
+          git diff --name-only -z "origin/${{ github.base_ref }}"...${{ github.sha }} -- ':(glob)**/*.py'
         elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
-          CHANGED_PY_FILES="$(git ls-files '*.py')"
+          git ls-files -z -- ':(glob)**/*.py'
         else
-          CHANGED_PY_FILES="$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- '*.py')"
+          git diff --name-only -z "${{ github.event.before }}" "${{ github.sha }}" -- ':(glob)**/*.py'
         fi
+        )
 
-        if [ -z "${CHANGED_PY_FILES}" ]; then
+        if [ ${#CHANGED_PY_FILES[@]} -eq 0 ]; then
           echo "No Python files changed; skipping pylint."
           exit 0
         fi
 
         echo "Running pylint on:"
-        echo "${CHANGED_PY_FILES}"
-        pylint ${CHANGED_PY_FILES}
+        printf '%s\n' "${CHANGED_PY_FILES[@]}"
+        pylint "${CHANGED_PY_FILES[@]}"
