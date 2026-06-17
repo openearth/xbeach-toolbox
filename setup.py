@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="xbTools",
-    version="1.0.2",
+    version="1.0.3",
     description="Toolbox to analyse and setup xbeach models",
     url="https://github.com/openearth/xbeach-toolbox",
     author="Menno de Ridder",
