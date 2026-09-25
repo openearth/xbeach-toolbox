@@ -761,10 +761,11 @@ class XBeachModelSetup():
                    "wbctype at the top of the params.txt file"
                 ))
         
-        # if not renamed to something specific, use jonswap.txt as the bcfile name in case of jonstable wbctype
-        if ((ordered_param_dict['Wave boundary condition parameters']['wbctype'] == 'jonstable')
-            and ("bcfile" not in ordered_param_dict['Wave boundary condition parameters'])):
-            ordered_param_dict['Wave boundary condition parameters']['bcfile'] = 'jonswap.txt'
+        # If not renamed to something specific, use jonswap.txt as the bcfile name.
+        wave_boundary_params = ordered_param_dict['Wave boundary condition parameters']
+        if (wave_boundary_params['wbctype'] in ('jonstable', 'parametric')
+                and 'bcfile' not in wave_boundary_params):
+            wave_boundary_params['bcfile'] = 'jonswap.txt'
 
         # Loop over the parameter categories in the input dict...
         for par_category in ordered_param_dict:
