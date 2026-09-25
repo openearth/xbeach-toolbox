@@ -63,7 +63,7 @@ class XBeachModelAnalysis():
 
         self.get_params()
         self.get_metadata()
-        self.load_grid()
+        # self.load_grid()
         self._cross_offset = 0
         self.load_output_coordinates()
 
